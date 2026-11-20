@@ -4,6 +4,8 @@ A **Hotel Management System (HMS)** is software that streamlines, automates, and
 
 This project is designed for small and medium-sized hotels and guest houses in Ghana. A shared view of bookings, room status, and guest balances helps staff coordinate daily work, especially where the same team handles several duties. For example, staff can record a phone booking alongside online reservations, see when housekeeping marks the assigned room ready, and combine room and restaurant charges on a guest's bill in Ghanaian cedis (GHS).
 
+Each hotel or guest house is a separate tenant. A single HMS deployment serves multiple tenants, each with its own staff access, room inventory, reservations, guest records, billing, and reports.
+
 ## Key features
 
 - **Front desk and reservations management.** Record bookings, maintain guest profiles, assign rooms, and handle check-ins and check-outs. A shared, up-to-date availability calendar helps staff spot conflicting reservations and prevent double-booking.
@@ -25,7 +27,13 @@ This project is designed for small and medium-sized hotels and guest houses in G
 | Housekeeping staff and supervisors | Update room status and report maintenance issues. Staff mark rooms clean after servicing them, and supervisors mark rooms inspected after checking them. |
 | Hotel managers and general managers (GMs) | Perform all front desk duties and manage rooms and eligible staff accounts at their property. Oversee daily operations, adjust room pricing, monitor staff performance, and review financial and occupancy reports. |
 | Administrators | Configure assigned properties and manage staff access within those properties, including manager and housekeeping accounts. |
-| System administrators | Manage platform-wide configuration, deployments, monitoring, backups, and recovery. Access to hotel operational records requires a separate property role. |
+| System administrators | Create and manage hotel tenants, appoint their initial property administrators, and manage platform-wide configuration, deployments, monitoring, backups, and recovery. Access to hotel operational records requires a separate property role. |
+
+## Tenant management
+
+System administrators use a platform administration area to create tenants, update tenant details, suspend and reactivate access, and archive tenants that have stopped using the system. Each new tenant receives a unique property ID and an invitation for its initial property administrator. Property administrators then configure their hotel and manage staff access within it.
+
+Suspension blocks staff access and pauses tenant integrations while preserving records. Archive retired tenants so their records remain available for authorised retention and recovery. Record tenant creation, administrator appointments, and lifecycle changes in the platform audit log.
 
 ## Manager workflows
 
@@ -84,12 +92,16 @@ Save the payment, receipt reference, and audit event in one transaction. An auth
 
 ### SQL data model
 
-- **Properties and staff.** `properties`, `users`, and `property_memberships` associate staff accounts with their assigned properties and roles. Store system administrator assignments separately from property memberships.
+- **Tenants and staff.** Each `properties` row represents one tenant and stores its lifecycle status. `users` and `property_memberships` associate staff accounts with their assigned tenants and roles. Store system administrator assignments separately from property memberships.
 - **Rooms, guests, and stays.** `room_types`, `rooms`, `guests`, `reservations`, and `room_allocations` capture room inventory, contact details, stay dates, and room assignments. Store one row per active booked night in `room_nights`, with a unique constraint on `(property_id, room_id, stay_date)`. Write the reservation, allocations, and room nights in one transaction. Roll back on a uniqueness conflict and return HTTP 409. Release room nights in the same transaction as a cancellation or reassignment. Include arrival and exclude departure when generating room nights so another guest can arrive on the departure date.
 - **Operations and billing.** `housekeeping_events`, `folios`, `folio_items`, `payments`, and `cash_shifts` record room status changes, charges, cash receipts, refunds, and shift reconciliation. Link cash entries to the folio, cashier, and shift, and enforce receipt number uniqueness per property. Store monetary amounts as integer pesewas with a currency code. Use GHS and the `Africa/Accra` time zone for local business dates and reports.
 - **Channel integrations.** `channel_connections`, `channel_reservations`, and `integration_jobs` track external channels, their reservation references, and synchronisation attempts.
 
 Use foreign keys that preserve property boundaries, indexes for property-scoped date and status queries, and versioned migrations. Test backup restoration as part of deployment readiness.
+
+### Tenant isolation
+
+Use a shared Azure SQL database with `property_id` as the tenant key. Include it on tenant-owned records and enforce property-scoped relationships with composite foreign keys. The API validates the requested property against the user's active membership and the tenant's lifecycle status before accessing records. Apply the same tenant scope to reports, exports, audit views, caches, and background jobs. Staff assigned to several hotels select a tenant and work within that tenant until they switch.
 
 ### JWT authentication and authorisation
 
@@ -106,6 +118,8 @@ Store events in an append-only `audit_events` table in Azure SQL Database. Each 
 Write audit events for successful data changes in the same transaction as the change. Record reads and failed or denied requests independently so a rolled-back business transaction preserves the audit record of the attempt. Surface audit write failures to operators. Provide an audit view with filters for date, user, action, and outcome. Grant audit access through an explicit permission within the user's property or platform scope, and log audit views and exports. The application database role can append audit events and read them through authorised queries. Restrict retention and archival operations to a separate database role.
 
 ### Verification
+
+Verify that system administrators can create, suspend, and reactivate tenants, that property roles cannot perform those actions, and that suspension blocks existing sessions from accessing the tenant. Test that staff cannot use another tenant's identifiers to access records, reports, exports, or audit logs.
 
 Verify that room closures and removals cannot conflict with bookings and that archived rooms remain visible in historical reports. Verify that managers can manage eligible staff only at their own property, that removing membership blocks the user's existing access to that property, and that password reset links expire, work once, and revoke prior sessions on completion.
 
