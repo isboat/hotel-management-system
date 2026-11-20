@@ -1,7 +1,7 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { currency, toPesewas, today } from './api'
 import type { Api } from './api'
-import { ActionForm, field, Notice, useRecords } from './components'
+import { ActionForm, DescribedField, field, Notice, useRecords } from './components'
 import type { Folio, Guest, Receipt, Room, Stay } from './types'
 
 export function Reservations({ api, path, canRefund, property }: { api: Api; path: string; canRefund: boolean; property: string }) {
@@ -26,14 +26,14 @@ export function Reservations({ api, path, canRefund, property }: { api: Api; pat
     {booking && <section className="panel"><h2>Find availability</h2>
       <ActionForm label="Find rooms" action={async () => setAvailability(await api<Room[]>(`${path}/availability?arrival=${arrival}&departure=${departure}`))}>
         <div className="fields"><label>Arrival<input type="date" required value={arrival} onChange={event => { setArrival(event.target.value); setAvailability([]) }} /></label>
-          <label>Departure<input type="date" required value={departure} onChange={event => { setDeparture(event.target.value); setAvailability([]) }} /></label></div>
+          <DescribedField label="Departure" description="Choose the checkout date. The final booked night is the night before."><input type="date" required value={departure} onChange={event => { setDeparture(event.target.value); setAvailability([]) }} /></DescribedField></div>
       </ActionForm>
       {!!availability.length && <ActionForm label="Confirm reservation" action={async data => {
         await api(`${path}/reservations`, 'POST', { guest: guests.rows.find(guest => guest.id === guestId)?.name ?? field(data, 'guest'), guestId: guestId || null, roomId: field(data, 'room'), arrival, departure })
         reload(); setAvailability([]); setBooking(false)
-      }}><div className="fields"><label>Guest profile<select value={guestId} onChange={event => setGuestId(event.target.value)}>
+      }}><div className="fields"><DescribedField label="Guest profile" description="Select an existing guest to link the reservation to their stay history, or enter a guest name for this booking."><select value={guestId} onChange={event => setGuestId(event.target.value)}>
         <option value="">Enter a guest name</option>{guests.rows.map(guest => <option key={guest.id} value={guest.id}>{guest.name}</option>)}
-      </select></label>{!guestId && <label>Guest name<input name="guest" required /></label>}<label>Available room<select name="room">
+      </select></DescribedField>{!guestId && <label>Guest name<input name="guest" required /></label>}<label>Available room<select name="room">
         {availability.map(room => <option value={room.id} key={room.id}>Room {room.number} · {currency(room.rate)} / night</option>)}
       </select></label></div></ActionForm>}
     </section>}
@@ -76,7 +76,6 @@ function GuestFolio({ api, path, stay, close, canRefund, property }: { api: Api;
   const [receipt, setReceipt] = useState<Receipt>()
   const reference = useRef(crypto.randomUUID())
   const refundReference = useRef(crypto.randomUUID())
-  const fieldId = useId()
   const endpoint = `${path}/folios/${stay.id}`
 
   useEffect(() => {
@@ -93,35 +92,41 @@ function GuestFolio({ api, path, stay, close, canRefund, property }: { api: Api;
         View receipt · {currency(payment.amount)}
       </button>)}
       {folio.balance > 0 && !['Cancelled', 'CheckedOut'].includes(stay.status) && <ActionForm label="Record cash payment" action={async data => {
+        const amount = toPesewas(field(data, 'amount'))
+        const tendered = toPesewas(field(data, 'tendered'))
+        if (amount <= 0 || amount > folio.balance) throw new Error('Enter a payment greater than zero and within the outstanding balance.')
+        if (tendered < amount) throw new Error('Cash tendered must cover the amount applied.')
+        if (!window.confirm([
+          `Record a cash payment for ${stay.guest}?`,
+          `Amount applied: ${currency(amount)}`,
+          `Cash tendered: ${currency(tendered)}`,
+          `Change to give: ${currency(tendered - amount)}`,
+        ].join('\n'))) return
         const payment = await api<Receipt>(`${endpoint}/payments`, 'POST', {
-          reference: reference.current, amount: toPesewas(field(data, 'amount')), tendered: toPesewas(field(data, 'tendered')),
+          reference: reference.current, amount, tendered,
         })
         setFolio(await api<Folio>(endpoint))
         setReceipt(payment)
         reference.current = crypto.randomUUID()
-      }}><div className="fields"><div className="folio-field">
-          <label htmlFor={`${fieldId}-amount`}>Amount applied (GHS)</label>
-          <span className="field-help" id={`${fieldId}-amount-help`}>Enter how much of this payment should go toward the guest’s outstanding balance.</span>
-          <input id={`${fieldId}-amount`} name="amount" aria-describedby={`${fieldId}-amount-help`} required inputMode="decimal" />
-        </div>
-        <div className="folio-field">
-          <label htmlFor={`${fieldId}-tendered`}>Cash tendered (GHS)</label>
-          <span className="field-help" id={`${fieldId}-tendered-help`}>Enter the total cash the guest handed you, before giving any change.</span>
-          <input id={`${fieldId}-tendered`} name="tendered" aria-describedby={`${fieldId}-tendered-help`} required inputMode="decimal" />
-        </div></div></ActionForm>}
+      }}><div className="fields"><DescribedField label="Amount applied (GHS)" description="Enter how much of this payment should go toward the guest’s outstanding balance.">
+          <input name="amount" required inputMode="decimal" />
+        </DescribedField>
+        <DescribedField label="Cash tendered (GHS)" description="Enter the total cash the guest handed you, before giving any change.">
+          <input name="tendered" required inputMode="decimal" />
+        </DescribedField></div></ActionForm>}
       {!['Cancelled', 'CheckedOut'].includes(stay.status) && <ActionForm label="Post charge" action={async data => {
-        await api(`${endpoint}/charges`, 'POST', { description: field(data, 'description'), amount: toPesewas(field(data, 'charge')) })
+        const description = field(data, 'description').trim()
+        const amount = toPesewas(field(data, 'charge'))
+        if (!description || amount <= 0) throw new Error('Enter a charge description and an amount greater than zero.')
+        if (!window.confirm(`Post this charge to ${stay.guest}’s folio?\n${description} · ${currency(amount)}`)) return
+        await api(`${endpoint}/charges`, 'POST', { description, amount })
         setFolio(await api<Folio>(endpoint))
-      }}><div className="fields"><div className="folio-field">
-          <label htmlFor={`${fieldId}-description`}>Charge description</label>
-          <span className="field-help" id={`${fieldId}-description-help`}>Describe what the guest is being charged for, such as laundry or room service.</span>
-          <input id={`${fieldId}-description`} name="description" aria-describedby={`${fieldId}-description-help`} required />
-        </div>
-        <div className="folio-field">
-          <label htmlFor={`${fieldId}-charge`}>Charge amount (GHS)</label>
-          <span className="field-help" id={`${fieldId}-charge-help`}>Enter the price of the item or service to add to the guest’s balance.</span>
-          <input id={`${fieldId}-charge`} name="charge" aria-describedby={`${fieldId}-charge-help`} required inputMode="decimal" />
-        </div></div></ActionForm>}
+      }}><div className="fields"><DescribedField label="Charge description" description="Describe what the guest is being charged for, such as laundry or room service.">
+          <input name="description" required />
+        </DescribedField>
+        <DescribedField label="Charge amount (GHS)" description="Enter the price of the item or service to add to the guest’s balance.">
+          <input name="charge" required inputMode="decimal" />
+        </DescribedField></div></ActionForm>}
       {receipt && <div className="receipt"><h3>{receipt.amount < 0 ? 'Cash refund receipt' : 'Cash receipt'} · {property}</h3>
         <p>Receipt {receipt.id} · Folio {stay.id}</p><p>{new Date(receipt.utc).toLocaleString()} · Cashier {receipt.cashierId}</p>
         {receipt.amount < 0 ? <p>Refunded {currency(-receipt.amount)}</p> :
@@ -136,8 +141,8 @@ function GuestFolio({ api, path, stay, close, canRefund, property }: { api: Api;
         setFolio(await api<Folio>(endpoint))
         setReceipt(refund)
         refundReference.current = crypto.randomUUID()
-      }}><div className="fields"><label>Refund amount (GHS)<input name="refund" required inputMode="decimal" /></label>
-        <label>Refund reason<input name="reason" required /></label></div></ActionForm>}
+      }}><div className="fields"><DescribedField label="Refund amount (GHS)" description="Enter the cash to return. It cannot exceed the amount still refundable on this receipt."><input name="refund" required inputMode="decimal" /></DescribedField>
+        <DescribedField label="Refund reason" description="Explain why the guest is receiving a refund."><input name="reason" required /></DescribedField></div></ActionForm>}
     </>}
   </section>
 }

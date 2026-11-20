@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { currency, today } from './api'
 import type { Api } from './api'
-import { ActionForm, field, Notice, useRecords } from './components'
+import { ActionForm, DescribedField, field, Notice, useRecords } from './components'
 import type { Audit, Hotel, Staff } from './types'
 
 export function StaffDirectory({ api, path, role }: { api: Api; path: string; role: string }) {
@@ -32,9 +32,9 @@ export function StaffDirectory({ api, path, role }: { api: Api; path: string; ro
         await api(`${path}/staff/${selectedStaff.id}`, 'PUT', { name: field(data, 'name'), role: field(data, 'role') })
         setSelectedStaff(undefined); reload()
       }}><div className="fields"><label>Name<input name="name" required defaultValue={selectedStaff.name} /></label>
-        <label>Role<select name="role" defaultValue={selectedStaff.role}>
+        <DescribedField label="Role" description="The role controls what this staff member can view or change at the property."><select name="role" defaultValue={selectedStaff.role}>
           {roles.map(option => <option key={option}>{option}</option>)}
-        </select></label></div>
+        </select></DescribedField></div>
       </ActionForm><button className="text-button" onClick={() => setSelectedStaff(undefined)}>Cancel</button>
     </section>}
     <div className="record-list">{rows.map(member => <article className="panel record" key={member.id}>
@@ -54,8 +54,8 @@ function StaffForm({ roles, submit }: { roles: string[]; submit: (data: unknown)
     email: field(data, 'email'), name: field(data, 'name'), role: field(data, 'role'), password: field(data, 'password'),
   })}><div className="fields">
     <label>Name<input name="name" required /></label><label>Email address<input name="email" type="email" required /></label>
-    <label>Role<select name="role">{roles.map(role => <option key={role}>{role}</option>)}</select></label>
-    <label>Initial password<input name="password" type="password" minLength={12} required autoComplete="new-password" /></label>
+    <DescribedField label="Role" description="The role controls what this staff member can view or change at the property."><select name="role">{roles.map(role => <option key={role}>{role}</option>)}</select></DescribedField>
+    <DescribedField label="Initial password" description="Use at least 12 characters. The staff member uses this password to sign in."><input name="password" type="password" minLength={12} required autoComplete="new-password" /></DescribedField>
   </div></ActionForm>
 }
 
@@ -74,8 +74,8 @@ function HotelDetailsFields({ hotel }: { hotel?: Hotel }) {
       <label>Hotel name<input name="name" required maxLength={150} defaultValue={hotel?.name} /></label>
       <label>Telephone<input name="telephone" type="tel" maxLength={40} defaultValue={hotel?.telephone ?? ''} /></label>
     </div>
-    <label>Description<textarea name="description" rows={3} maxLength={1000} defaultValue={hotel?.description ?? ''} /></label>
-    <label>Address<textarea name="address" rows={3} maxLength={500} defaultValue={hotel?.address ?? ''} /></label>
+    <DescribedField label="Description" description="Optional. Add a short summary to help administrators identify this property."><textarea name="description" rows={3} maxLength={1000} defaultValue={hotel?.description ?? ''} /></DescribedField>
+    <DescribedField label="Address" description="Optional. Include the street address, neighbourhood, and town or city."><textarea name="address" rows={3} maxLength={500} defaultValue={hotel?.address ?? ''} /></DescribedField>
   </>
 }
 
@@ -107,12 +107,12 @@ export function Tenants({ api }: { api: Api }) {
         {hotel.description && <p className="multiline-text">{hotel.description}</p>}
       </div>
       <div className="actions"><button className="secondary" onClick={() => setEditingHotel(hotel)}>Edit</button><button className="secondary" disabled={hotel.archived || hotel.suspended} onClick={() => setSelected(hotel)}>Assign administrator</button>
-        <label>Tenant status<select value={hotel.archived ? 'Archived' : hotel.suspended ? 'Suspended' : 'Active'} onChange={async event => {
+        <DescribedField label="Tenant status" description="Only active tenants are available to staff. Changes save immediately."><select value={hotel.archived ? 'Archived' : hotel.suspended ? 'Suspended' : 'Active'} onChange={async event => {
           const status = event.target.value
           if (status === 'Archived' && !confirm(`Archive ${hotel.name}?`)) return
           try { await api(`/platform/properties/${hotel.id}`, 'PATCH', { status }); reload() }
           catch (failure) { setFeedback((failure as Error).message) }
-        }}><option>Active</option><option>Suspended</option><option>Archived</option></select></label>
+        }}><option>Active</option><option>Suspended</option><option>Archived</option></select></DescribedField>
       </div></article>)}</div>
   </>
 }
@@ -151,7 +151,7 @@ export function Reports({ api, path }: { api: Api; path: string }) {
     <ActionForm label="Run report" action={async data => setReport(await api<Occupancy>(
       `${path}/reports/occupancy?arrival=${field(data, 'arrival')}&departure=${field(data, 'departure')}`))}>
       <div className="fields"><label>From<input type="date" name="arrival" required defaultValue={today()} /></label>
-        <label>Until (exclusive)<input type="date" name="departure" required /></label></div>
+        <DescribedField label="Until (exclusive)" description="Choose the first date to exclude from the report."><input type="date" name="departure" required /></DescribedField></div>
     </ActionForm></section>
     {report && <div className="card-grid">
       <article className="panel metric"><p>Room nights booked</p><strong>{report.sold} / {report.available}</strong></article>

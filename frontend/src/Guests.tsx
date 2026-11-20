@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Api } from './api'
-import { ActionForm, field, Notice, useRecords } from './components'
+import { ActionForm, DescribedField, field, Notice, useRecords } from './components'
 import type { Guest, Stay } from './types'
 
 export function Guests({ api, path }: { api: Api; path: string }) {
@@ -32,11 +32,11 @@ export function Guests({ api, path }: { api: Api; path: string }) {
         setEditing(false); setGuest(undefined); profiles.reload()
       }}><div className="fields">
         <label>Name<input name="name" required defaultValue={guest?.name} /></label>
-        <label>ID number<input name="idNumber" maxLength={64} defaultValue={guest?.idNumber ?? ''} /></label>
+        <DescribedField label="ID number" description="Optional. Enter the number on the guest’s ID document, such as a Ghana Card or passport."><input name="idNumber" maxLength={64} defaultValue={guest?.idNumber ?? ''} /></DescribedField>
         <label>Email<input name="email" type="email" defaultValue={guest?.email ?? ''} /></label>
         <label>Phone<input name="phone" type="tel" defaultValue={guest?.phone ?? ''} /></label>
-        <label>Preferences<input name="preferences" maxLength={500} defaultValue={guest?.preferences ?? ''} /></label>
-      </div><label className="check"><input name="marketing" type="checkbox" defaultChecked={guest?.marketingOptIn} /> Agreed to marketing communications</label></ActionForm>
+        <DescribedField label="Preferences" description="Optional. Note requests that may help with future stays, such as a quiet room."><input name="preferences" maxLength={500} defaultValue={guest?.preferences ?? ''} /></DescribedField>
+      </div><DescribedField label="Agreed to marketing communications" description="Select only if the guest agreed to receive promotional messages." checkbox><input name="marketing" type="checkbox" defaultChecked={guest?.marketingOptIn} /></DescribedField></ActionForm>
       <button className="text-button" onClick={() => setEditing(false)}>Cancel</button>
     </section>}
     {guest && !editing && <section className="panel"><h2>Guest details · {guest.name}</h2>

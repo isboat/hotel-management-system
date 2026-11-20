@@ -28,7 +28,7 @@ button:disabled { opacity: .55; cursor: wait; }
 input, select { width: 100%; border: 1px solid #aebdb3; background: var(--paper); color: var(--ink); padding: .55rem .65rem; }
 label { display: grid; gap: .35rem; font-size: .87rem; font-weight: 650; min-width: 0; }
 fieldset { padding: 0; border: 0; margin: 0; min-width: 0; display: grid; gap: .85rem; justify-items: start; }
-fieldset > label, fieldset > .fields { width: 100%; }
+fieldset > label, fieldset > .fields, fieldset > .described-field { width: 100%; }
 form { margin-top: .8rem; }
 .secondary { color: var(--green); background: var(--paper); border-color: var(--border); }
 .danger { color: #9a3223; }
@@ -49,7 +49,7 @@ nav button[aria-current] { background: #2d6555; color: #fff; }
 .workspace { min-width: 0; }
 header { padding: .8rem clamp(1rem, 4vw, 2.5rem); display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: var(--paper); }
 header > div, .actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
-.folio-field { display: grid; grid-template-rows: auto 1fr auto; align-content: start; gap: .35rem; min-width: 0; }
+.described-field { display: grid; grid-template-rows: auto 1fr auto; align-content: start; gap: .35rem; min-width: 0; }
 .field-help { font-size: .8rem; color: var(--muted); line-height: 1.4; }
 .staff-name { color: var(--muted); font-size: .87rem; }
 .workspace main { max-width: 85rem; padding: clamp(1rem, 4vw, 2.5rem); display: grid; gap: 1rem; }

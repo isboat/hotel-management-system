@@ -90,3 +90,58 @@ test('rotated credentials survive a second reload', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Accra Lodge' })).toBeVisible()
   expect(refreshCalls).toBe(1)
 })
+
+test('folio posts charges and cash payments only after confirmation', async ({ page }) => {
+  const posts: string[] = []
+  await page.route('**/api/v1/**', async route => {
+    const request = route.request()
+    const path = new URL(request.url()).pathname
+    if (path.endsWith('/login')) {
+      await route.fulfill({ json: { id: 'staff', token: 'test-session', refreshToken: 'test-refresh', name: 'Tom', isSystemAdmin: false } })
+    } else if (path.endsWith('/auth/properties')) {
+      await route.fulfill({ json: [{ id: 'hotel', name: 'Accra Lodge', role: 'FrontDesk' }] })
+    } else if (path.endsWith('/reservations')) {
+      await route.fulfill({ json: [{ id: 'stay', guest: 'Smith', status: 'Confirmed', arrival: '2026-12-01', departure: '2026-12-03' }] })
+    } else if (path.endsWith('/folios/stay')) {
+      await route.fulfill({ json: { total: 20000, balance: 20000, charges: [], payments: [] } })
+    } else if (request.method() === 'POST' && path.includes('/folios/stay/')) {
+      posts.push(path.split('/').pop()!)
+      await route.fulfill({ json: { id: 'receipt', amount: 5000, tendered: 6000, utc: '2026-12-01T10:00:00Z' } })
+    } else {
+      await route.fulfill({ json: [] })
+    }
+  })
+
+  await page.goto('/')
+  await page.getByLabel('Email address').fill('tom@example.test')
+  await page.getByLabel('Password', { exact: true }).fill('example-password')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await page.getByRole('button', { name: 'Reservations', exact: true }).click()
+  await page.getByRole('button', { name: 'Folio' }).click()
+  await page.getByLabel('Charge description').fill('Laundry')
+  await page.getByLabel('Charge amount (GHS)').fill('25')
+  await page.getByLabel('Amount applied (GHS)').fill('50')
+  await page.getByLabel('Cash tendered (GHS)').fill('60')
+
+  for (const [label, detail, endpoint] of [
+    ['Post charge', 'Laundry', 'charges'],
+    ['Record cash payment', 'Change to give', 'payments'],
+  ]) {
+    const submit = page.getByRole('button', { name: label, exact: true })
+    const priorPosts = posts.length
+    page.once('dialog', async dialog => {
+      expect(dialog.message()).toContain(detail)
+      await dialog.dismiss()
+    })
+    await submit.click()
+    await expect(submit).toBeEnabled()
+    expect(posts).toHaveLength(priorPosts)
+
+    const posted = page.waitForResponse(response => response.url().endsWith('/' + endpoint))
+    page.once('dialog', dialog => dialog.accept())
+    await submit.click()
+    await posted
+    await expect(submit).toBeEnabled()
+    expect(posts.slice(priorPosts)).toEqual([endpoint])
+  }
+})

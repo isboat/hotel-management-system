@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { BedDouble } from 'lucide-react'
 import { currency, toPesewas } from './api'
 import type { Api } from './api'
-import { ActionForm, field, Notice, useRecords } from './components'
+import { ActionForm, DescribedField, field, Notice, useRecords } from './components'
 import type { Room } from './types'
 
 export function Rooms({ api, path, role }: { api: Api; path: string; role: string }) {
@@ -37,12 +37,12 @@ export function Rooms({ api, path, role }: { api: Api; path: string; role: strin
       }}>
         <div className="fields">
           <label>Room number<input name="number" required defaultValue={selected?.number} /></label>
-          <label>Room type<input name="type" required defaultValue={selected?.type} /></label>
-          <label>Capacity<input name="capacity" type="number" min="1" max="100" defaultValue={selected?.capacity ?? 2} required /></label>
-          <label>Nightly rate (GHS)<input name="rate" inputMode="decimal" required defaultValue={selected ? selected.rate / 100 : ''} /></label>
+          <DescribedField label="Room type" description="Enter a category such as Single, Double, or Suite."><input name="type" required defaultValue={selected?.type} /></DescribedField>
+          <DescribedField label="Capacity" description="Enter the maximum number of guests the room can accommodate."><input name="capacity" type="number" min="1" max="100" defaultValue={selected?.capacity ?? 2} required /></DescribedField>
+          <DescribedField label="Nightly rate (GHS)" description="Enter the price for one night. This rate is used for new reservations."><input name="rate" inputMode="decimal" required defaultValue={selected ? selected.rate / 100 : ''} /></DescribedField>
         </div>
-        <label>Room description<textarea name="description" rows={3} maxLength={1000} defaultValue={selected?.description ?? ''} /></label>
-        <label className="check"><input name="closed" type="checkbox" defaultChecked={selected?.outOfService} /> Out of service</label>
+        <DescribedField label="Room description" description="Optional. Mention features staff may need when assigning the room, such as a balcony or step-free access."><textarea name="description" rows={3} maxLength={1000} defaultValue={selected?.description ?? ''} /></DescribedField>
+        <DescribedField label="Out of service" description="Select to make the room unavailable for new bookings." checkbox><input name="closed" type="checkbox" defaultChecked={selected?.outOfService} /></DescribedField>
       </ActionForm>
       <button className="text-button" onClick={() => setEditing(false)}>Cancel</button>
     </section>}
@@ -54,9 +54,9 @@ export function Rooms({ api, path, role }: { api: Api; path: string; role: strin
         <p>{room.type} · Sleeps {room.capacity}</p>
         {room.description && <p className="multiline-text">{room.description}</p>}
         <strong>{currency(room.rate)} / night</strong>
-        {canClean && <label>Housekeeping status<select value={room.status} onChange={event => void update(`/rooms/${room.id}/housekeeping`, 'PATCH', { status: event.target.value })}>
+        {canClean && <DescribedField label="Housekeeping status" description="Use Dirty for rooms awaiting cleaning, Clean after cleaning, and Inspected after a supervisor’s check. Saving is automatic."><select value={room.status} onChange={event => void update(`/rooms/${room.id}/housekeeping`, 'PATCH', { status: event.target.value })}>
           <option>Dirty</option><option>Clean</option>{(role !== 'Housekeeping' || room.status === 'Inspected') && <option disabled={role === 'Housekeeping'}>Inspected</option>}
-        </select></label>}
+        </select></DescribedField>}
         {manager && <div className="actions"><button className="secondary" onClick={() => { setSelected(room); setEditing(true) }}>Edit</button>
           <button className="secondary danger" onClick={() => { if (confirm(`Remove room ${room.number} from inventory?`)) void update(`/rooms/${room.id}`, 'DELETE') }}>Remove</button></div>}
       </article>)}</div>
@@ -66,7 +66,7 @@ export function Rooms({ api, path, role }: { api: Api; path: string; role: strin
         await api(`${path}/maintenance`, 'POST', { roomId: field(data, 'room'), description: field(data, 'description') })
         setFeedback('Maintenance issue reported.')
       }}><div className="fields"><label>Room<select name="room">{rows.map(room => <option key={room.id} value={room.id}>{room.number}</option>)}</select></label>
-        <label>Issue<input name="description" required maxLength={500} /></label></div>
+        <DescribedField label="Issue" description="Describe the problem and where it is in the room, such as a leak under the bathroom sink."><input name="description" required maxLength={500} /></DescribedField></div>
       </ActionForm></section>}
   </>
 }
