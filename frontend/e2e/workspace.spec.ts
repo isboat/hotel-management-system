@@ -123,24 +123,29 @@ test('folio posts charges and cash payments only after confirmation', async ({ p
   await page.getByLabel('Amount applied (GHS)').fill('50')
   await page.getByLabel('Cash tendered (GHS)').fill('60')
 
-  for (const [label, detail, endpoint] of [
-    ['Post charge', 'Laundry', 'charges'],
-    ['Record cash payment', 'Change to give', 'payments'],
+  for (const [label, title, detail, confirmLabel, endpoint] of [
+    ['Post charge', 'Review charge', 'Laundry', 'Confirm charge', 'charges'],
+    ['Record cash payment', 'Review cash payment', 'Change to give', 'Confirm payment', 'payments'],
   ]) {
     const submit = page.getByRole('button', { name: label, exact: true })
+    const dialog = page.getByRole('dialog', { name: title })
     const priorPosts = posts.length
-    page.once('dialog', async dialog => {
-      expect(dialog.message()).toContain(detail)
-      await dialog.dismiss()
-    })
     await submit.click()
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByText(detail, { exact: true })).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused()
+    expect(posts).toHaveLength(priorPosts)
+    if (endpoint === 'charges') await page.keyboard.press('Escape')
+    else await dialog.getByRole('button', { name: 'Cancel' }).click()
+    await expect(dialog).toHaveCount(0)
     await expect(submit).toBeEnabled()
     expect(posts).toHaveLength(priorPosts)
 
     const posted = page.waitForResponse(response => response.url().endsWith('/' + endpoint))
-    page.once('dialog', dialog => dialog.accept())
     await submit.click()
+    await dialog.getByRole('button', { name: confirmLabel }).click()
     await posted
+    await expect(dialog).toHaveCount(0)
     await expect(submit).toBeEnabled()
     expect(posts.slice(priorPosts)).toEqual([endpoint])
   }

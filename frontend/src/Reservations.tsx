@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { currency, toPesewas, today } from './api'
 import type { Api } from './api'
 import { ActionForm, DescribedField, field, Notice, useRecords } from './components'
+import { FolioConfirmation } from './FolioConfirmation'
+import type { FolioReview } from './FolioConfirmation'
 import type { Folio, Guest, Receipt, Room, Stay } from './types'
 
 export function Reservations({ api, path, canRefund, property }: { api: Api; path: string; canRefund: boolean; property: string }) {
@@ -74,6 +76,18 @@ function GuestFolio({ api, path, stay, close, canRefund, property }: { api: Api;
   const [folio, setFolio] = useState<Folio>()
   const [error, setError] = useState('')
   const [receipt, setReceipt] = useState<Receipt>()
+  const [confirmation, setConfirmation] = useState<{ review: FolioReview; decide: (confirmed: boolean) => void }>()
+
+  function confirmTransaction(review: FolioReview) {
+    const trigger = document.activeElement
+    return new Promise<boolean>(resolve => {
+      setConfirmation({ review, decide: confirmed => {
+        setConfirmation(undefined)
+        resolve(confirmed)
+        if (!confirmed && trigger instanceof HTMLElement) requestAnimationFrame(() => trigger.focus())
+      } })
+    })
+  }
   const reference = useRef(crypto.randomUUID())
   const refundReference = useRef(crypto.randomUUID())
   const endpoint = `${path}/folios/${stay.id}`
@@ -85,6 +99,7 @@ function GuestFolio({ api, path, stay, close, canRefund, property }: { api: Api;
   }, [api, endpoint])
 
   return <section className="panel folio">
+    {confirmation && <FolioConfirmation review={confirmation.review} onDecision={confirmation.decide} />}
     <div className="section-title"><h2>Folio · {stay.guest}</h2><button className="secondary" onClick={close}>Close</button></div>
     <Notice text={error} />
     {folio && <><ul>{folio.charges.map(charge => <li key={charge.id}>{charge.description} · {currency(charge.amount)}</li>)}</ul><p>Total {currency(folio.total)} · Balance <strong>{currency(folio.balance)}</strong></p>
@@ -96,12 +111,14 @@ function GuestFolio({ api, path, stay, close, canRefund, property }: { api: Api;
         const tendered = toPesewas(field(data, 'tendered'))
         if (amount <= 0 || amount > folio.balance) throw new Error('Enter a payment greater than zero and within the outstanding balance.')
         if (tendered < amount) throw new Error('Cash tendered must cover the amount applied.')
-        if (!window.confirm([
-          `Record a cash payment for ${stay.guest}?`,
-          `Amount applied: ${currency(amount)}`,
-          `Cash tendered: ${currency(tendered)}`,
-          `Change to give: ${currency(tendered - amount)}`,
-        ].join('\n'))) return
+        if (!await confirmTransaction({
+          title: 'Review cash payment', guest: stay.guest, confirmLabel: 'Confirm payment',
+          details: [
+            { label: 'Amount applied', value: currency(amount) },
+            { label: 'Cash tendered', value: currency(tendered) },
+            { label: 'Change to give', value: currency(tendered - amount) },
+          ],
+        })) return
         const payment = await api<Receipt>(`${endpoint}/payments`, 'POST', {
           reference: reference.current, amount, tendered,
         })
@@ -118,7 +135,13 @@ function GuestFolio({ api, path, stay, close, canRefund, property }: { api: Api;
         const description = field(data, 'description').trim()
         const amount = toPesewas(field(data, 'charge'))
         if (!description || amount <= 0) throw new Error('Enter a charge description and an amount greater than zero.')
-        if (!window.confirm(`Post this charge to ${stay.guest}’s folio?\n${description} · ${currency(amount)}`)) return
+        if (!await confirmTransaction({
+          title: 'Review charge', guest: stay.guest, confirmLabel: 'Confirm charge',
+          details: [
+            { label: 'Description', value: description },
+            { label: 'Charge amount', value: currency(amount) },
+          ],
+        })) return
         await api(`${endpoint}/charges`, 'POST', { description, amount })
         setFolio(await api<Folio>(endpoint))
       }}><div className="fields"><DescribedField label="Charge description" description="Describe what the guest is being charged for, such as laundry or room service.">
