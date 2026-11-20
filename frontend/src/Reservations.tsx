@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { currency, toPesewas, today } from './api'
 import type { Api } from './api'
 import { ActionForm, DescribedField, field, Notice, useRecords } from './components'
-import { FolioConfirmation } from './FolioConfirmation'
-import type { FolioReview } from './FolioConfirmation'
+import { ConfirmationOverlay } from './ConfirmationOverlay'
+import type { ConfirmationReview } from './ConfirmationOverlay'
 import type { Folio, Guest, Receipt, Room, Stay } from './types'
 
 export function Reservations({ api, path, canRefund, property }: { api: Api; path: string; canRefund: boolean; property: string }) {
@@ -22,7 +22,21 @@ export function Reservations({ api, path, canRefund, property }: { api: Api; pat
   const [guestId, setGuestId] = useState('')
   const guests = useRecords<Guest>(api, booking ? `${path}/guests` : null)
 
+  const [confirmation, setConfirmation] = useState<{ review: ConfirmationReview; decide: (confirmed: boolean) => void }>()
+
+  function requestConfirmation(review: ConfirmationReview) {
+    const trigger = document.activeElement
+    return new Promise<boolean>(resolve => {
+      setConfirmation({ review, decide: confirmed => {
+        setConfirmation(undefined)
+        resolve(confirmed)
+        if (!confirmed && trigger instanceof HTMLElement) requestAnimationFrame(() => trigger.focus())
+      } })
+    })
+  }
+
   return <>
+    {confirmation && <ConfirmationOverlay review={confirmation.review} onDecision={confirmation.decide} />}
     <div className="section-title"><div><h1>Reservations</h1><p>Arrivals, departures and guest folios</p></div><button onClick={() => { setAvailability(undefined); setBooking(value => !value) }}>New reservation</button></div>
     <Notice text={error || errorText} />
     {booking && <section className="panel"><h2>Find availability</h2>
@@ -35,15 +49,27 @@ export function Reservations({ api, path, canRefund, property }: { api: Api; pat
       </ActionForm>
       {availability?.length === 0 && <p className="empty" role="status">No rooms are available for the selected dates. Try a different arrival or departure date.</p>}
       {!!availability?.length && <ActionForm label="Confirm reservation" action={async data => {
-        await api(`${path}/reservations`, 'POST', { guest: guests.rows.find(guest => guest.id === guestId)?.name ?? field(data, 'guest'), guestId: guestId || null, roomId: field(data, 'room'), arrival, departure })
+        const guest = (guests.rows.find(profile => profile.id === guestId)?.name ?? field(data, 'guest')).trim()
+        const room = availability.find(room => room.id === field(data, 'room'))
+        if (!guest || !room) throw new Error('Enter a guest name and select an available room.')
+        if (!await requestConfirmation({
+          title: 'Review reservation', subtitle: guest, confirmLabel: 'Confirm reservation',
+          details: [
+            { label: 'Room', value: `Room ${room.number}` },
+            { label: 'Arrival', value: arrival },
+            { label: 'Departure', value: departure },
+            { label: 'Nightly rate', value: currency(room.rate) },
+          ],
+        })) return
+        await api(`${path}/reservations`, 'POST', { guest, guestId: guestId || null, roomId: room.id, arrival, departure })
         reload(); setAvailability(undefined); setBooking(false)
-      }}><div className="fields"><DescribedField label="Guest profile" description="Select an existing guest to link the reservation to their stay history, or enter a guest name for this booking."><select value={guestId} onChange={event => setGuestId(event.target.value)}>
-        <option value="">Enter a guest name</option>{guests.rows.map(guest => <option key={guest.id} value={guest.id}>{guest.name}</option>)}
+      }}><div className="fields"><DescribedField label="Guest profile" description="Select an existing guest or enter a name to create a new guest profile."><select value={guestId} onChange={event => setGuestId(event.target.value)}>
+        <option value="">Add a new guest</option>{guests.rows.map(guest => <option key={guest.id} value={guest.id}>{guest.name}</option>)}
       </select></DescribedField>{!guestId && <label>Guest name<input name="guest" required /></label>}<label>Available room<select name="room">
         {availability.map(room => <option value={room.id} key={room.id}>Room {room.number} · {currency(room.rate)} / night</option>)}
       </select></label></div></ActionForm>}
     </section>}
-    {selected && <GuestFolio key={selected.id} api={api} path={path} stay={rows.find(row => row.id === selected.id) ?? selected} canRefund={canRefund} property={property} close={() => setSelected(undefined)} />}
+    {selected && <GuestFolio key={selected.id} api={api} path={path} stay={rows.find(row => row.id === selected.id) ?? selected} canRefund={canRefund} property={property} requestConfirmation={requestConfirmation} close={() => setSelected(undefined)} />}
     <div className="fields">
       <label>Find a reservation<input value={search} onChange={event => { setSearch(event.target.value); setOffset(0) }} placeholder="Guest name" /></label>
       <label>Reservation status<select value={status} onChange={event => { setStatus(event.target.value); setOffset(0) }}>
@@ -76,22 +102,13 @@ export function Reservations({ api, path, canRefund, property }: { api: Api; pat
   </>
 }
 
-function GuestFolio({ api, path, stay, close, canRefund, property }: { api: Api; path: string; stay: Stay; close: () => void; canRefund: boolean; property: string }) {
+function GuestFolio({ api, path, stay, close, canRefund, property, requestConfirmation }: {
+  api: Api; path: string; stay: Stay; close: () => void; canRefund: boolean; property: string
+  requestConfirmation: (review: ConfirmationReview) => Promise<boolean>
+}) {
   const [folio, setFolio] = useState<Folio>()
   const [error, setError] = useState('')
   const [receipt, setReceipt] = useState<Receipt>()
-  const [confirmation, setConfirmation] = useState<{ review: FolioReview; decide: (confirmed: boolean) => void }>()
-
-  function confirmTransaction(review: FolioReview) {
-    const trigger = document.activeElement
-    return new Promise<boolean>(resolve => {
-      setConfirmation({ review, decide: confirmed => {
-        setConfirmation(undefined)
-        resolve(confirmed)
-        if (!confirmed && trigger instanceof HTMLElement) requestAnimationFrame(() => trigger.focus())
-      } })
-    })
-  }
   const reference = useRef(crypto.randomUUID())
   const refundReference = useRef(crypto.randomUUID())
   const endpoint = `${path}/folios/${stay.id}`
@@ -103,7 +120,6 @@ function GuestFolio({ api, path, stay, close, canRefund, property }: { api: Api;
   }, [api, endpoint])
 
   return <section className="panel folio">
-    {confirmation && <FolioConfirmation review={confirmation.review} onDecision={confirmation.decide} />}
     <div className="section-title"><h2>Folio · {stay.guest}</h2><button className="secondary" onClick={close}>Close</button></div>
     <Notice text={error} />
     {folio && <><ul>{folio.charges.map(charge => <li key={charge.id}>{charge.description} · {currency(charge.amount)}</li>)}</ul><p>Total {currency(folio.total)} · Balance <strong>{currency(folio.balance)}</strong></p>
@@ -115,8 +131,8 @@ function GuestFolio({ api, path, stay, close, canRefund, property }: { api: Api;
         const tendered = toPesewas(field(data, 'tendered'))
         if (amount <= 0 || amount > folio.balance) throw new Error('Enter a payment greater than zero and within the outstanding balance.')
         if (tendered < amount) throw new Error('Cash tendered must cover the amount applied.')
-        if (!await confirmTransaction({
-          title: 'Review cash payment', guest: stay.guest, confirmLabel: 'Confirm payment',
+        if (!await requestConfirmation({
+          title: 'Review cash payment', subtitle: `${stay.guest}’s folio`, confirmLabel: 'Confirm payment',
           details: [
             { label: 'Amount applied', value: currency(amount) },
             { label: 'Cash tendered', value: currency(tendered) },
@@ -139,8 +155,8 @@ function GuestFolio({ api, path, stay, close, canRefund, property }: { api: Api;
         const description = field(data, 'description').trim()
         const amount = toPesewas(field(data, 'charge'))
         if (!description || amount <= 0) throw new Error('Enter a charge description and an amount greater than zero.')
-        if (!await confirmTransaction({
-          title: 'Review charge', guest: stay.guest, confirmLabel: 'Confirm charge',
+        if (!await requestConfirmation({
+          title: 'Review charge', subtitle: `${stay.guest}’s folio`, confirmLabel: 'Confirm charge',
           details: [
             { label: 'Description', value: description },
             { label: 'Charge amount', value: currency(amount) },

@@ -204,3 +204,47 @@ test('maintenance keeps fixed issues in history with their fix date', async ({ p
   await expect(issueCard.locator('time[datetime="2026-12-02T12:30:00Z"]')).toBeVisible()
   await expect(issueCard.getByRole('button', { name: 'Mark fixed' })).toHaveCount(0)
 })
+
+test('staff review the reservation before it is created', async ({ page }) => {
+  const bookings: unknown[] = []
+  await page.route('**/api/v1/**', async route => {
+    const request = route.request()
+    const path = new URL(request.url()).pathname
+    if (path.endsWith('/login')) {
+      await route.fulfill({ json: { id: 'staff', token: 'session', refreshToken: 'refresh', name: 'Tom', isSystemAdmin: false } })
+    } else if (path.endsWith('/auth/properties')) {
+      await route.fulfill({ json: [{ id: 'hotel', name: 'Accra Lodge', role: 'FrontDesk' }] })
+    } else if (path.endsWith('/availability')) {
+      await route.fulfill({ json: [{ id: 'room', number: '101', rate: 35000 }] })
+    } else if (path.endsWith('/reservations') && request.method() === 'POST') {
+      bookings.push(request.postDataJSON())
+      await route.fulfill({ json: { id: 'reservation' } })
+    } else {
+      await route.fulfill({ json: [] })
+    }
+  })
+  await page.goto('/')
+  await page.getByLabel('Email address').fill('tom@example.test')
+  await page.getByLabel('Password', { exact: true }).fill('example-password')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await page.getByRole('button', { name: 'Reservations', exact: true }).click()
+  await page.getByRole('button', { name: 'New reservation' }).click()
+  await page.getByLabel('Arrival', { exact: true }).fill('2026-12-01')
+  await page.getByLabel('Departure', { exact: true }).fill('2026-12-03')
+  await page.getByRole('button', { name: 'Find rooms' }).click()
+  await page.getByLabel('Guest name', { exact: true }).fill('Smith')
+  const submit = page.getByRole('button', { name: 'Confirm reservation', exact: true })
+  const dialog = page.getByRole('dialog', { name: 'Review reservation' })
+  await submit.click()
+  await expect(dialog.getByText('Smith')).toBeVisible()
+  await expect(dialog.getByText('Room 101', { exact: true })).toBeVisible()
+  await expect(dialog.getByText('2026-12-03', { exact: true })).toBeVisible()
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+  await expect(page.getByLabel('Guest name', { exact: true })).toHaveValue('Smith')
+  expect(bookings).toHaveLength(0)
+
+  await submit.click()
+  await dialog.getByRole('button', { name: 'Confirm reservation', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Find availability' })).toHaveCount(0)
+  expect(bookings).toEqual([{ guest: 'Smith', guestId: null, roomId: 'room', arrival: '2026-12-01', departure: '2026-12-03' }])
+})

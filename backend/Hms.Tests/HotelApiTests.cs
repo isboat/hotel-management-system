@@ -94,6 +94,11 @@ public sealed class HotelApiTests
                 staff.PostAsJsonAsync($"{path}/reservations", booking));
             Assert.Single(results, response => response.StatusCode == HttpStatusCode.Conflict);
             var stay = await Read(Assert.Single(results, response => response.IsSuccessStatusCode));
+            var bookingGuestId = stay.GetProperty("guestId").GetGuid();
+            var bookedGuests = await Read(await staff.GetAsync($"{path}/guests?search=Test%20guest"));
+            Assert.Equal(bookingGuestId, Assert.Single(bookedGuests.EnumerateArray()).GetProperty("id").GetGuid());
+            var guestStays = await Read(await staff.GetAsync($"{path}/guests/{bookingGuestId}/stays"));
+            Assert.Equal(stay.GetProperty("id").GetGuid(), Assert.Single(guestStays.EnumerateArray()).GetProperty("id").GetGuid());
             var folio = $"{path}/folios/{stay.GetProperty("id").GetString()}";
             var shift = await Read(await staff.PostAsJsonAsync($"{path}/cash-shifts", new { amount = 10000 }));
             var shifts = await Read(await staff.GetAsync($"{path}/cash-shifts"));

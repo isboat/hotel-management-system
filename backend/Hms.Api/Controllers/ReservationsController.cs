@@ -55,9 +55,14 @@ public sealed class ReservationsController(HotelDatabase database, TenantAccess 
         if (room is null || room.Archived || room.OutOfService) return Conflict("Room is unavailable.");
         var guest = input.GuestId is Guid guestId ? await database.Guests.FindAsync(hotelId, guestId) : null;
         if (input.GuestId.HasValue && guest is null) return NotFound("Guest profile unavailable.");
+        if (guest is null)
+        {
+            guest = new GuestProfile(hotelId, Guid.NewGuid(), input.Guest.Trim(), null, null, null, false);
+            database.Guests.Add(guest);
+        }
         var numberOfNights = input.Departure.DayNumber - input.Arrival.DayNumber;
-        var reservation = new Reservation(hotelId, Guid.NewGuid(), room.Id, guest?.Name ?? input.Guest.Trim(), input.Arrival,
-            input.Departure, room.Rate * numberOfNights, GuestId: guest?.Id);
+        var reservation = new Reservation(hotelId, Guid.NewGuid(), room.Id, guest.Name, input.Arrival,
+            input.Departure, room.Rate * numberOfNights, GuestId: guest.Id);
         database.Reservations.Add(reservation);
         database.RoomNights.AddRange(Enumerable.Range(0, numberOfNights)
             .Select(offset => new RoomNight(hotelId, room.Id, input.Arrival.AddDays(offset), reservation.Id)));
