@@ -150,7 +150,18 @@ public sealed class HotelApiTests
             await Read(await staff.PostAsJsonAsync($"{path}/reservations", new { roomId = activeRoomId, guest = "Replacement Guest", arrival = today, departure = tomorrow }));
             var swagger = await Read(await staff.GetAsync("/swagger/v1/swagger.json"));
             Assert.Equal("Hotel Management API", swagger.GetProperty("info").GetProperty("title").GetString());
-            var audit = await Read(await staff.GetAsync($"{path}/audit"));
+            var audit = (await Read(await staff.GetAsync($"{path}/audit?pageSize=100"))).GetProperty("items");
+            var firstAuditPage = await Read(await staff.GetAsync($"{path}/audit?pageSize=1"));
+            Assert.True(firstAuditPage.GetProperty("hasMore").GetBoolean());
+            var snapshot = Uri.EscapeDataString(firstAuditPage.GetProperty("snapshotUtc").GetString()!);
+            var secondAuditPage = await Read(await staff.GetAsync($"{path}/audit?pageSize=1&offset=1&snapshot={snapshot}"));
+            Assert.NotEqual(firstAuditPage.GetProperty("items")[0].GetProperty("id").GetGuid(),
+                secondAuditPage.GetProperty("items")[0].GetProperty("id").GetGuid());
+            var matchingAudit = await Read(await staff.GetAsync($"{path}/audit?search=assigned%20guest%20%28test%20guest%29&result=success&pageSize=1"));
+            Assert.Single(matchingAudit.GetProperty("items").EnumerateArray());
+            Assert.False(matchingAudit.GetProperty("hasMore").GetBoolean());
+            var platformAudit = await Read(await platform.GetAsync("/api/v1/platform/audit?search=platform%40example.test&pageSize=1"));
+            Assert.Single(platformAudit.GetProperty("items").EnumerateArray());
             Assert.Contains(audit.EnumerateArray(), row => row.GetProperty("outcome").GetInt32() == 409);
             Assert.DoesNotContain("GHA-00123", audit.GetRawText());
             Assert.DoesNotContain("000123", audit.GetRawText());

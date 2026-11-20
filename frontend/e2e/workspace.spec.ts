@@ -41,14 +41,21 @@ test('front desk signs in and can navigate to room inventory', async ({ page }) 
 
 test('audit log shows the staff identity, action, and Ghana time', async ({ page }) => {
   await page.route('**/api/v1/**', async route => {
-    const path = new URL(route.request().url()).pathname
+    const url = new URL(route.request().url())
+    const path = url.pathname
     if (path.endsWith('/login')) {
       await route.fulfill({ json: { token: 'test-session', name: 'Tom', isSystemAdmin: true } })
     } else if (path.endsWith('/audit')) {
-      await route.fulfill({ json: [
+      const entries = [
         { id: 'sign-in', utc: '2026-12-02T11:20:00', staffName: 'Tom', staffEmail: 'TOM@EXAMPLE.TEST', action: 'logged in', outcome: 200 },
         { id: 'room', utc: '2026-12-02T11:30:00Z', staffName: 'Tom', staffEmail: 'TOM@EXAMPLE.TEST', action: 'assigned guest (Smith) to Room 1', outcome: 200 },
-      ] })
+      ]
+      const snapshotUtc = '2026-12-02T12:00:00Z'
+      const search = url.searchParams.get('search')
+      const offset = Number(url.searchParams.get('offset'))
+      if (url.searchParams.has('snapshot')) expect(url.searchParams.get('snapshot')).toBe(snapshotUtc)
+      const items = search ? entries.filter(entry => entry.action.includes(search)) : entries.slice(offset / 25, offset / 25 + 1)
+      await route.fulfill({ json: { items, hasMore: !search && offset === 0, snapshotUtc } })
     } else {
       await route.fulfill({ json: [] })
     }
@@ -60,6 +67,12 @@ test('audit log shows the staff identity, action, and Ghana time', async ({ page
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.getByRole('button', { name: 'Audit log' }).click()
   await expect(page.getByText(/Tom \(tom@example.test\) logged in on 2 December 2026 at 11:20/i)).toBeVisible()
+  const pages = page.getByRole('navigation', { name: 'Audit log pages' })
+  await pages.getByRole('button', { name: 'Next' }).click()
+  await expect(page.getByText(/assigned guest \(Smith\) to Room 1/)).toBeVisible()
+  await expect(pages.getByText('Page 2')).toBeVisible()
+  await pages.getByRole('button', { name: 'Previous' }).click()
+  await expect(page.getByText(/logged in/)).toBeVisible()
   await page.getByLabel('Filter activity').fill('Smith')
   await expect(page.getByText(/assigned guest \(Smith\) to Room 1/)).toBeVisible()
   await expect(page.getByText(/logged in/)).toHaveCount(0)

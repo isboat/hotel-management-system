@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { currency, today } from './api'
 import type { Api } from './api'
 import { ActionForm, DescribedField, field, Notice, useRecords } from './components'
@@ -117,17 +117,34 @@ export function Tenants({ api }: { api: Api }) {
   </>
 }
 
+type AuditPage = { items: Audit[]; hasMore: boolean; snapshotUtc: string }
+
 export function AuditLog({ api, path }: { api: Api; path: string }) {
   const [outcome, setOutcome] = useState('')
   const [query, setQuery] = useState('')
-  const { rows, error } = useRecords<Audit>(api, `${path}/audit`)
-  return <><h1>Audit log</h1><Notice text={error} />
-    <div className="fields"><label>Filter activity<input value={query} onChange={event => setQuery(event.target.value)} placeholder="Name, email or action" /></label>
-      <label>Outcome<select value={outcome} onChange={event => setOutcome(event.target.value)}><option value="">All outcomes</option><option value="success">Successful</option><option value="failure">Failed or denied</option></select></label></div>
-    <div className="record-list">{rows.filter(row =>
-      (!outcome || (outcome === 'success' ? row.outcome < 400 : row.outcome >= 400)) &&
-      `${row.action} ${row.staffName ?? ''} ${row.staffEmail ?? ''}`.toLowerCase().includes(query.toLowerCase())
-    ).map(row => {
+  const [page, setPage] = useState<{ number: number; snapshot?: string }>({ number: 1 })
+  const [data, setData] = useState<AuditPage & { url: string }>()
+  const [error, setError] = useState<{ url: string; message: string }>()
+  const pageSize = 25
+  const params = new URLSearchParams({ search: query, result: outcome, offset: String((page.number - 1) * pageSize), pageSize: String(pageSize) })
+  if (page.snapshot) params.set('snapshot', page.snapshot)
+  const url = `${path}/audit?${params}`
+
+  useEffect(() => {
+    let active = true
+    api<AuditPage>(url).then(
+      response => { if (active) { setData({ ...response, url }); setError(undefined) } },
+      failure => { if (active) { setData(undefined); setError({ url, message: failure.message }) } },
+    )
+    return () => { active = false }
+  }, [api, url])
+
+  const result = data?.url === url ? data : undefined
+  const failure = error?.url === url ? error.message : ''
+  return <><h1>Audit log</h1><Notice text={failure} />
+    <div className="fields"><label>Filter activity<input value={query} onChange={event => { setQuery(event.target.value); setPage({ number: 1 }) }} placeholder="Name, email or action" /></label>
+      <label>Outcome<select value={outcome} onChange={event => { setOutcome(event.target.value); setPage({ number: 1 }) }}><option value="">All outcomes</option><option value="success">Successful</option><option value="failure">Failed or denied</option></select></label></div>
+    <div className="record-list">{result?.items.map(row => {
       const actor = row.staffName ? `${row.staffName}${row.staffEmail ? ` (${row.staffEmail.toLowerCase()})` : ''}` : 'Unknown user'
       const timestamp = /(?:Z|[+-]\d{2}:\d{2})$/i.test(row.utc) ? row.utc : `${row.utc}Z`
       const date = new Date(timestamp)
@@ -139,7 +156,15 @@ export function AuditLog({ api, path }: { api: Api; path: string }) {
         {row.outcome >= 400 && <span className="status">Failed ({row.outcome})</span>}
       </div></article>
     })}</div>
-    {!rows.length && <p className="empty">No recorded activity yet.</p>}
+    {!result && !failure && <p role="status">Loading activity…</p>}
+    {result?.items.length === 0 && <p className="empty">No matching activity.</p>}
+    {(page.number > 1 || result?.hasMore) && <nav className="actions" aria-label="Audit log pages">
+      <button className="secondary" disabled={page.number === 1} onClick={() =>
+        setPage({ number: page.number - 1, snapshot: page.snapshot })}>Previous</button>
+      <span role="status">Page {page.number}</span>
+      <button className="secondary" disabled={!result?.hasMore} onClick={() =>
+        setPage({ number: page.number + 1, snapshot: result?.snapshotUtc })}>Next</button>
+    </nav>}
   </>
 }
 
@@ -154,11 +179,26 @@ export function Reports({ api, path }: { api: Api; path: string }) {
         <DescribedField label="Until (exclusive)" description="Choose the first date to exclude from the report."><input type="date" name="departure" required /></DescribedField></div>
     </ActionForm></section>
     {report && <div className="card-grid">
-      <article className="panel metric"><p>Room nights booked</p><strong>{report.sold} / {report.available}</strong></article>
-      <article className="panel metric"><p>Occupancy</p><strong>{report.occupancy.toFixed(1)}%</strong></article>
-      <article className="panel metric"><p>Room revenue</p><strong>{currency(report.revenue)}</strong></article>
-      <article className="panel metric"><p>Average daily rate</p><strong>{currency(report.adr)}</strong></article>
-      <article className="panel metric"><p>Revenue per available room</p><strong>{currency(report.revPar)}</strong></article>
+      <article className="panel metric">
+        <p>Room nights booked</p><strong>{report.sold} / {report.available}</strong>
+        <p>Booked nights out of all available room nights in the selected period. One room booked for two nights counts as two.</p>
+      </article>
+      <article className="panel metric">
+        <p>Occupancy</p><strong>{report.occupancy.toFixed(1)}%</strong>
+        <p>The percentage of available room nights that were booked.</p>
+      </article>
+      <article className="panel metric">
+        <p>Room revenue</p><strong>{currency(report.revenue)}</strong>
+        <p>The value of room nights booked in the selected period, based on reservation rates. Extras and cash receipts are tracked separately.</p>
+      </article>
+      <article className="panel metric">
+        <p>Average daily rate</p><strong>{currency(report.adr)}</strong>
+        <p>Room revenue divided by the number of booked room nights.</p>
+      </article>
+      <article className="panel metric">
+        <p>Revenue per available room</p><strong>{currency(report.revPar)}</strong>
+        <p>Room revenue divided by all available room nights, including nights that went unbooked.</p>
+      </article>
     </div>}
   </>
 }

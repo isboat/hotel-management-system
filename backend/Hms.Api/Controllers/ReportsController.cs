@@ -12,9 +12,11 @@ public sealed class ReportsController(HotelDatabase database, TenantAccess acces
 {
     [HttpGet("audit")]
     [AuditAction("viewed the audit log", "view the audit log")]
-    public async Task<IActionResult> Audit(Guid hotelId, Guid? userId, int? outcome)
+    public async Task<IActionResult> Audit(Guid hotelId, Guid? userId, int? outcome, string? search, string? result,
+        DateTimeOffset? snapshot, int offset = 0, int pageSize = 25)
     {
         if (!await access.Allows(User, hotelId, "Administrator")) return Forbid();
+        if (offset < 0 || pageSize is < 1 or > 100) return BadRequest("Invalid audit page.");
         var events = database.Audit.Where(row => (row.HotelId == hotelId && !row.Target.StartsWith("/api/v1/platform")) ||
             (row.HotelId == null && row.Action == "logged in" && database.Memberships.Any(member =>
                 member.HotelId == hotelId && member.StaffId == row.StaffId && member.Active)));
@@ -24,7 +26,7 @@ public sealed class ReportsController(HotelDatabase database, TenantAccess acces
             database.Memberships.Any(member => member.HotelId == hotelId && member.StaffId == actor.Id) ||
             database.Audit.Any(row => row.HotelId == hotelId && row.StaffId == actor.Id && row.Outcome < 400 &&
                 !row.Target.StartsWith("/api/v1/platform")));
-        return Ok(await AuditLogEntry.WithStaff(events, propertyStaff).ToListAsync());
+        return Ok(await AuditLogPage.ReadAsync(events, propertyStaff, offset, pageSize, snapshot, search, result));
     }
 
     [HttpGet("reports/occupancy")]

@@ -60,8 +60,14 @@ public sealed class PlatformController(HotelDatabase database) : ControllerBase
 
     [HttpGet("audit")]
     [AuditAction("viewed the platform audit log", "view the platform audit log")]
-    public async Task<IActionResult> Audit() =>
-        await IsAdministrator() ? Ok(await AuditLogEntry.WithStaff(database.Audit.Where(row => row.HotelId == null || row.Target.StartsWith("/api/v1/platform")), database.Staff)
-            .ToListAsync()) : Forbid();
+    public async Task<IActionResult> Audit(string? search, string? result, DateTimeOffset? snapshot,
+        int offset = 0, int pageSize = 25)
+    {
+        if (!await IsAdministrator()) return Forbid();
+        if (offset < 0 || pageSize is < 1 or > 100) return BadRequest("Invalid audit page.");
+        var events = database.Audit.Where(row => row.HotelId == null || row.Target.StartsWith("/api/v1/platform"));
+        return Ok(await AuditLogPage.ReadAsync(events, database.Staff, offset, pageSize, snapshot, search, result));
+    }
+
     private static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
