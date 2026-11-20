@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import { CalendarDays, Plus } from 'lucide-react'
 import { currency, toPesewas, today } from './api'
 import type { Api } from './api'
-import { ActionForm, DescribedField, field, Notice, useRecords } from './components'
+import { ActionForm, DescribedField, field, Notice, PageHeading, useRecords } from './components'
 import { ConfirmationOverlay } from './ConfirmationOverlay'
 import type { ConfirmationReview } from './ConfirmationOverlay'
 import type { Folio, Guest, Receipt, Room, Stay } from './types'
@@ -40,7 +41,7 @@ export function Reservations({ api, path, canRefund, property }: { api: Api; pat
 
   return <>
     {confirmation && <ConfirmationOverlay review={confirmation.review} onDecision={confirmation.decide} />}
-    <div className="section-title"><div><h1>Reservations</h1><p>Arrivals, departures and guest folios</p></div><button onClick={() => { setAvailability(undefined); setBookingGuest(undefined); setGuestSearch(''); setBooking(value => !value) }}>New reservation</button></div>
+    <PageHeading title="Reservations" icon={CalendarDays} subtitle="Arrivals, departures and guest folios"><button onClick={() => { setAvailability(undefined); setBookingGuest(undefined); setGuestSearch(''); setBooking(value => !value) }}><Plus size={17} aria-hidden="true" /> New reservation</button></PageHeading>
     <Notice text={error || errorText} />
     {booking && <section className="panel"><h2>Find availability</h2>
       <ActionForm label="Find rooms" action={async () => {
@@ -84,7 +85,7 @@ export function Reservations({ api, path, canRefund, property }: { api: Api; pat
     </div>
     <div className="record-list">
       {rows.map(row => <article className="panel record" key={row.id}>
-        <div><h2>{row.guest}</h2><p>{row.arrival} to {row.departure}</p></div><span className="status">{row.status.replace(/([a-z])([A-Z])/g, '$1 $2')}</span>
+        <div><h2>{row.guest}</h2><p>{row.arrival} to {row.departure}</p></div><span className={`status ${row.status === 'CheckedIn' ? 'is-positive' : row.status === 'Cancelled' ? 'is-danger' : ''}`}>{row.status.replace(/([a-z])([A-Z])/g, '$1 $2')}</span>
         <div className="actions"><button className="secondary" onClick={() => setSelected(row)}>Folio</button>
           {(row.status === 'Confirmed' || row.status === 'CheckedIn') && <button onClick={async () => {
             setErrorText('')

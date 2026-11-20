@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { BedDouble, Building2, CalendarDays, ChartNoAxesCombined, ClipboardList, LayoutDashboard, LogOut, Users, Wallet } from 'lucide-react'
-import { createApi, today } from './api'
-import type { Api } from './api'
+import { BedDouble, Building2, CalendarDays, ChartNoAxesCombined, ClipboardList, ContactRound, LayoutDashboard, LogOut, Menu, Users, Wallet } from 'lucide-react'
+import { domAnimation, LazyMotion, MotionConfig, m, useReducedMotion } from 'framer-motion'
+import { createApi } from './api'
 import { AuditLog, HotelDetails, Reports, StaffDirectory, Tenants } from './Administration'
 import { CashDesk } from './CashDesk'
 import { Guests } from './Guests'
@@ -9,7 +9,9 @@ import { Notice, SignIn, useRecords } from './components'
 import { Reservations } from './Reservations'
 import { Rooms } from './Rooms'
 import { readSession, saveSession } from './session'
-import type { Hotel, Room, Session, Stay } from './types'
+import { Overview } from './Overview'
+import { NavigationDrawer, WorkspaceNavigation } from './WorkspaceNavigation'
+import type { Hotel, Session } from './types'
 
 export default function App() {
   const [session, setSession] = useState(readSession)
@@ -29,8 +31,12 @@ export default function App() {
     if (activeSession.current === previous) changeSession()
   }, [changeSession])
 
-  return session ? <Workspace session={session} onRotate={rotateSession} onLogout={endSession} />
-    : <SignIn onSession={changeSession} />
+  return <MotionConfig reducedMotion="user">
+    <LazyMotion features={domAnimation} strict>
+      {session ? <Workspace session={session} onRotate={rotateSession} onLogout={endSession} />
+      : <SignIn onSession={changeSession} />}
+    </LazyMotion>
+  </MotionConfig>
 }
 
 function Workspace({ session, onRotate, onLogout }: {
@@ -44,6 +50,9 @@ function Workspace({ session, onRotate, onLogout }: {
   const [hotelId, setHotelId] = useState('')
   const [page, setPage] = useState(session.isSystemAdmin ? 'Tenants' : 'Overview')
   const [signingOut, setSigningOut] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const reducedMotion = useReducedMotion()
+  const closeDrawer = useCallback(() => setDrawerOpen(false), [])
   const hotel = hotels.find(row => row.id === hotelId) ?? hotels[0]
   const path = hotel ? `/properties/${hotel.id}` : ''
   const role = hotel?.role ?? ''
@@ -53,28 +62,42 @@ function Workspace({ session, onRotate, onLogout }: {
     ? [{ name: 'Tenants', icon: Building2 }, { name: 'Audit log', icon: ClipboardList }]
     : [
       { name: 'Overview', icon: LayoutDashboard }, { name: 'Rooms', icon: BedDouble },
-      ...(frontDesk ? [{ name: 'Reservations', icon: CalendarDays }, { name: 'Guests', icon: Users }, { name: 'Cash desk', icon: Wallet }] : []),
+      ...(frontDesk ? [{ name: 'Reservations', icon: CalendarDays }, { name: 'Guests', icon: ContactRound }, { name: 'Cash desk', icon: Wallet }] : []),
       ...(manager ? [{ name: 'Staff', icon: Users }, { name: 'Reports', icon: ChartNoAxesCombined }] : []),
       ...(role === 'Administrator' ? [{ name: 'Hotel details', icon: Building2 }, { name: 'Audit log', icon: ClipboardList }] : []),
     ]
+  const navigation = {
+    hotels, hotel, page, items,
+    onNavigate: (next: string) => { setPage(next); closeDrawer() },
+    onPropertyChange: (id: string) => { setHotelId(id); setPage('Overview'); closeDrawer() },
+  }
+  const accountInitials = session.name.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase()
+
   return <div className="shell">
-    <aside className="sidebar">
-      <span className="brand"><Building2 size={21} /> Hotel Management</span>
-      {hotel && <label className="property">Property<select value={hotel.id} onChange={event => { setHotelId(event.target.value); setPage('Overview') }}>
-        {hotels.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}
-      </select></label>}
-      <nav aria-label="Main navigation">{items.map(({ name, icon: Icon }) =>
-        <button key={name} onClick={() => setPage(name)} aria-current={page === name ? 'page' : undefined}><Icon size={17} />{name}</button>)}</nav>
-    </aside>
+    <aside className="sidebar"><WorkspaceNavigation {...navigation} /></aside>
+    {drawerOpen && <NavigationDrawer {...navigation} onClose={closeDrawer} />}
     <div className="workspace">
-      <header><span>{session.isSystemAdmin ? 'Platform administration' : hotel?.name}</span>
-        <div><span className="staff-name">{session.name}</span><button className="secondary" disabled={signingOut} onClick={async () => {
-          setSigningOut(true)
-          try { await api('/auth/logout', 'POST') }
-          catch { /* The local session is cleared even if server invalidation fails. */ }
-          finally { onLogout(session) }
-        }}><LogOut size={16} /> Sign out</button></div></header>
-      <main key={hotel?.id ?? 'platform'}>
+      <header className="workspace-header">
+        <div className="header-location">
+          <button className="secondary menu-toggle" type="button" aria-label="Open navigation" aria-expanded={drawerOpen}
+            onClick={() => setDrawerOpen(true)}><Menu size={20} /></button>
+          <Building2 size={17} aria-hidden="true" />
+          <strong>{session.isSystemAdmin ? 'Platform administration' : hotel?.name ?? 'Properties'}</strong>
+        </div>
+        <div className="header-account">
+          <span className="account-avatar" aria-hidden="true">{accountInitials}</span>
+          <span className="staff-name">{session.name}</span>
+          <button className="secondary" disabled={signingOut} onClick={async () => {
+            setSigningOut(true)
+            try { await api('/auth/logout', 'POST') }
+            catch { /* The local session is cleared even if server invalidation fails. */ }
+            finally { onLogout(session) }
+          }}><LogOut size={16} aria-hidden="true" /> Sign out</button>
+        </div>
+      </header>
+      <m.main key={`${hotel?.id ?? 'platform'}:${page}`}
+        initial={reducedMotion ? false : { opacity: .7, y: 6 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: .22, ease: 'easeOut' }}>
         <Notice text={error} />
         {session.isSystemAdmin ? (page === 'Tenants' ? <Tenants api={api} /> : <AuditLog api={api} path="/platform" />)
           : !hotel ? <p className="empty">No active property available.</p>
@@ -87,29 +110,7 @@ function Workspace({ session, onRotate, onLogout }: {
           : page === 'Hotel details' && role === 'Administrator' ? <HotelDetails api={api} path={path} onSaved={reloadHotels} />
           : page === 'Audit log' && role === 'Administrator' ? <AuditLog api={api} path={path} />
           : <Overview api={api} path={path} property={hotel.name} frontDesk={frontDesk} navigate={setPage} />}
-      </main>
+      </m.main>
     </div>
   </div>
-}
-
-function Overview({ api, path, property, frontDesk, navigate }: {
-  api: Api; path: string; property: string; frontDesk: boolean; navigate: (page: string) => void
-}) {
-  const rooms = useRecords<Room>(api, `${path}/rooms`)
-  const date = today()
-  const arrivals = useRecords<Stay>(api, frontDesk ? `${path}/reservations?status=Confirmed&arrival=${date}` : null)
-  const departures = useRecords<Stay>(api, frontDesk ? `${path}/reservations?status=CheckedIn&departure=${date}` : null)
-  return <>
-    <h1 className="overview-hotel-name">{property}</h1>
-    <p className="subtitle">{new Intl.DateTimeFormat('en-GH', { dateStyle: 'long', timeZone: 'Africa/Accra' }).format(new Date())}</p>
-    <Notice text={rooms.error || arrivals.error || departures.error} />
-    <div className="card-grid">
-      <article className="panel metric"><BedDouble size={20} /><p>Rooms ready</p><strong>{rooms.rows.filter(room => !room.outOfService && room.status !== 'Dirty').length}</strong></article>
-      {frontDesk && <><article className="panel metric"><CalendarDays size={20} /><p>Arrivals today</p><strong>{arrivals.rows.length}</strong></article>
-        <article className="panel metric"><CalendarDays size={20} /><p>Departures today</p><strong>{departures.rows.length}</strong></article></>}
-    </div>
-    {frontDesk && <section className="panel"><div className="section-title"><h2>Expected arrivals</h2><button className="secondary" onClick={() => navigate('Reservations')}>View reservations</button></div>
-      {arrivals.rows.length ? <ul className="arrivals">{arrivals.rows.map(row => <li key={row.id}>{row.guest}</li>)}</ul> : <p>No pending arrivals today.</p>}
-    </section>}
-  </>
 }
