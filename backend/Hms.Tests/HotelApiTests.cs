@@ -116,6 +116,18 @@ public sealed class HotelApiTests
             Assert.Equal("Property Admin", listedShift.GetProperty("cashierName").GetString());
             Assert.Equal("ADMIN@EXAMPLE.TEST", listedShift.GetProperty("cashierEmail").GetString());
             Assert.Equal(10000, listedShift.GetProperty("float").GetInt64());
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var database = scope.ServiceProvider.GetRequiredService<HotelDatabase>();
+                var openedLater = DateTime.UtcNow.AddMinutes(1);
+                database.CashShifts.AddRange(Enumerable.Range(0, 101).Select(index =>
+                    new CashShift(Guid.Parse(hotel), Guid.NewGuid(), Guid.NewGuid(), openedLater.AddSeconds(index), 0,
+                        ClosedUtc: openedLater.AddMinutes(5))));
+                await database.SaveChangesAsync();
+            }
+            var shiftsWithHistory = await Read(await staff.GetAsync($"{path}/cash-shifts"));
+            Assert.Equal(101, shiftsWithHistory.GetArrayLength());
+            Assert.Equal(shift.GetProperty("id").GetGuid(), shiftsWithHistory[0].GetProperty("id").GetGuid());
             var cash = new { reference = "test-receipt", amount = 25000, tendered = 30000 };
             var receipt = await Read(await staff.PostAsJsonAsync($"{folio}/payments", cash));
             var retry = await Read(await staff.PostAsJsonAsync($"{folio}/payments", cash));

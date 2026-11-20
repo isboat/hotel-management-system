@@ -19,8 +19,12 @@ public sealed class GuestsController(HotelDatabase database, TenantAccess access
     {
         if (!await CanManage(hotelId)) return Forbid();
         var profiles = database.Guests.Where(row => row.HotelId == hotelId);
-        if (!string.IsNullOrWhiteSpace(search)) profiles = profiles.Where(row => row.Name.Contains(search));
-        return Ok(await profiles.OrderBy(row => row.Name).Take(100)
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToUpperInvariant();
+            profiles = profiles.Where(row => row.Name.ToUpper().Contains(term));
+        }
+        return Ok(await profiles.OrderBy(row => row.Name).ThenBy(row => row.Id).Take(100)
             .Select(row => new { row.Id, row.Name, row.Email, row.Phone }).ToListAsync());
     }
 

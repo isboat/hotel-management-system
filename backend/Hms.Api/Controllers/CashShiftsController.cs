@@ -20,11 +20,14 @@ public sealed class CashShiftsController(HotelDatabase database, TenantAccess ac
         if (!await CanOperate(hotelId)) return Forbid();
         var manager = await access.Allows(User, hotelId, "Manager", "Administrator");
         var actorId = TenantAccess.Actor(User);
-        var shifts = from shift in database.CashShifts
-                     where shift.HotelId == hotelId && (manager || shift.CashierId == actorId)
+        var visibleShifts = database.CashShifts.Where(shift => shift.HotelId == hotelId && (manager || shift.CashierId == actorId));
+        var recentClosed = visibleShifts.Where(shift => shift.ClosedUtc != null)
+            .OrderByDescending(shift => shift.OpenedUtc).ThenBy(shift => shift.Id).Take(100);
+        var openAndRecent = visibleShifts.Where(shift => shift.ClosedUtc == null).Concat(recentClosed);
+        var shifts = from shift in openAndRecent
                      join staff in database.Staff on shift.CashierId equals staff.Id into cashiers
                      from cashier in cashiers.DefaultIfEmpty()
-                     orderby shift.OpenedUtc descending, shift.Id
+                     orderby shift.ClosedUtc != null, shift.OpenedUtc descending, shift.Id
                      select new
                      {
                          shift.HotelId, shift.Id, shift.CashierId, shift.OpenedUtc, shift.Float,
@@ -32,7 +35,7 @@ public sealed class CashShiftsController(HotelDatabase database, TenantAccess ac
                          CashierName = cashier == null ? null : cashier.Name,
                          CashierEmail = cashier == null ? null : cashier.Email
                      };
-        return Ok(await shifts.Take(100).ToListAsync());
+        return Ok(await shifts.ToListAsync());
     }
 
     [HttpPost]

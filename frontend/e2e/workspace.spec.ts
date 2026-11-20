@@ -229,6 +229,9 @@ test('staff confirm reservation creation and cancellation in the overlay', async
       await route.fulfill({ json: { id: 'staff', token: 'session', refreshToken: 'refresh', name: 'Tom', isSystemAdmin: false } })
     } else if (path.endsWith('/auth/properties')) {
       await route.fulfill({ json: [{ id: 'hotel', name: 'Accra Lodge', role: 'FrontDesk' }] })
+    } else if (path.endsWith('/guests')) {
+      const search = new URL(request.url()).searchParams.get('search')
+      await route.fulfill({ json: search === 'Smith' ? [{ id: 'smith', name: 'Smith' }] : [{ id: 'other', name: 'Other guest' }] })
     } else if (path.endsWith('/availability')) {
       await route.fulfill({ json: [{ id: 'room', number: '101', rate: 35000 }] })
     } else if (path.endsWith('/reservations') && request.method() === 'POST') {
@@ -253,7 +256,11 @@ test('staff confirm reservation creation and cancellation in the overlay', async
   await page.getByLabel('Arrival', { exact: true }).fill('2026-12-01')
   await page.getByLabel('Departure', { exact: true }).fill('2026-12-03')
   await page.getByRole('button', { name: 'Find rooms' }).click()
-  await page.getByLabel('Guest name', { exact: true }).fill('Smith')
+  await page.getByLabel('Search guest profiles').fill('Smith')
+  await page.getByLabel('Guest profile', { exact: true }).selectOption({ label: 'Smith' })
+  await page.getByLabel('Search guest profiles').fill('Other')
+  await expect(page.getByLabel('Guest profile', { exact: true }).getByRole('option', { name: 'Other guest' })).toHaveCount(1)
+  await expect(page.getByLabel('Guest profile', { exact: true })).toHaveValue('smith')
   const submit = page.getByRole('button', { name: 'Confirm reservation', exact: true })
   const dialog = page.getByRole('dialog', { name: 'Review reservation' })
   await submit.click()
@@ -261,13 +268,13 @@ test('staff confirm reservation creation and cancellation in the overlay', async
   await expect(dialog.getByText('Room 101', { exact: true })).toBeVisible()
   await expect(dialog.getByText('2026-12-03', { exact: true })).toBeVisible()
   await dialog.getByRole('button', { name: 'Cancel' }).click()
-  await expect(page.getByLabel('Guest name', { exact: true })).toHaveValue('Smith')
+  await expect(page.getByLabel('Guest profile', { exact: true })).toHaveValue('smith')
   expect(bookings).toHaveLength(0)
 
   await submit.click()
   await dialog.getByRole('button', { name: 'Confirm reservation', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Find availability' })).toHaveCount(0)
-  expect(bookings).toEqual([{ guest: 'Smith', guestId: null, roomId: 'room', arrival: '2026-12-01', departure: '2026-12-03' }])
+  expect(bookings).toEqual([{ guest: 'Smith', guestId: 'smith', roomId: 'room', arrival: '2026-12-01', departure: '2026-12-03' }])
 
   const cancelBooking = page.getByRole('button', { name: 'Cancel booking', exact: true })
   const cancelDialog = page.getByRole('dialog', { name: 'Cancel booking?' })

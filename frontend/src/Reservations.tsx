@@ -19,8 +19,11 @@ export function Reservations({ api, path, canRefund, property }: { api: Api; pat
   const query = new URLSearchParams({ offset: String(offset), search })
   if (status) query.set('status', status)
   const { rows, error, reload } = useRecords<Stay>(api, `${path}/reservations?${query}`)
-  const [guestId, setGuestId] = useState('')
-  const guests = useRecords<Guest>(api, booking ? `${path}/guests` : null)
+  const [guestSearch, setGuestSearch] = useState('')
+  const [bookingGuest, setBookingGuest] = useState<Guest>()
+  const guests = useRecords<Guest>(api, booking ? `${path}/guests?search=${encodeURIComponent(guestSearch)}` : null)
+  const guestOptions = bookingGuest && !guests.rows.some(guest => guest.id === bookingGuest.id)
+    ? [bookingGuest, ...guests.rows] : guests.rows
 
   const [confirmation, setConfirmation] = useState<{ review: ConfirmationReview; decide: (confirmed: boolean) => void }>()
 
@@ -37,7 +40,7 @@ export function Reservations({ api, path, canRefund, property }: { api: Api; pat
 
   return <>
     {confirmation && <ConfirmationOverlay review={confirmation.review} onDecision={confirmation.decide} />}
-    <div className="section-title"><div><h1>Reservations</h1><p>Arrivals, departures and guest folios</p></div><button onClick={() => { setAvailability(undefined); setBooking(value => !value) }}>New reservation</button></div>
+    <div className="section-title"><div><h1>Reservations</h1><p>Arrivals, departures and guest folios</p></div><button onClick={() => { setAvailability(undefined); setBookingGuest(undefined); setGuestSearch(''); setBooking(value => !value) }}>New reservation</button></div>
     <Notice text={error || errorText} />
     {booking && <section className="panel"><h2>Find availability</h2>
       <ActionForm label="Find rooms" action={async () => {
@@ -49,7 +52,7 @@ export function Reservations({ api, path, canRefund, property }: { api: Api; pat
       </ActionForm>
       {availability?.length === 0 && <p className="empty" role="status">No rooms are available for the selected dates. Try a different arrival or departure date.</p>}
       {!!availability?.length && <ActionForm label="Confirm reservation" action={async data => {
-        const guest = (guests.rows.find(profile => profile.id === guestId)?.name ?? field(data, 'guest')).trim()
+        const guest = (bookingGuest?.name ?? field(data, 'guest')).trim()
         const room = availability.find(room => room.id === field(data, 'room'))
         if (!guest || !room) throw new Error('Enter a guest name and select an available room.')
         if (!await requestConfirmation({
@@ -61,11 +64,13 @@ export function Reservations({ api, path, canRefund, property }: { api: Api; pat
             { label: 'Nightly rate', value: currency(room.rate) },
           ],
         })) return
-        await api(`${path}/reservations`, 'POST', { guest, guestId: guestId || null, roomId: room.id, arrival, departure })
+        await api(`${path}/reservations`, 'POST', { guest, guestId: bookingGuest?.id ?? null, roomId: room.id, arrival, departure })
         reload(); setAvailability(undefined); setBooking(false)
-      }}><div className="fields"><DescribedField label="Guest profile" description="Select an existing guest or enter a name to create a new guest profile."><select value={guestId} onChange={event => setGuestId(event.target.value)}>
-        <option value="">Add a new guest</option>{guests.rows.map(guest => <option key={guest.id} value={guest.id}>{guest.name}</option>)}
-      </select></DescribedField>{!guestId && <label>Guest name<input name="guest" required /></label>}<label>Available room<select name="room">
+      }}><Notice text={guests.error} /><div className="fields">
+        <label>Search guest profiles<input value={guestSearch} onChange={event => setGuestSearch(event.target.value)} placeholder="Guest name" /></label>
+        <DescribedField label="Guest profile" description="Select an existing guest or enter a name to create a new guest profile."><select value={bookingGuest?.id ?? ''} onChange={event => setBookingGuest(guestOptions.find(guest => guest.id === event.target.value))}>
+        <option value="">Add a new guest</option>{guestOptions.map(guest => <option key={guest.id} value={guest.id}>{guest.name}</option>)}
+      </select></DescribedField>{!bookingGuest && <label>Guest name<input name="guest" required /></label>}<label>Available room<select name="room">
         {availability.map(room => <option value={room.id} key={room.id}>Room {room.number} · {currency(room.rate)} / night</option>)}
       </select></label></div></ActionForm>}
     </section>}
