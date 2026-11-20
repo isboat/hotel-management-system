@@ -24,7 +24,7 @@ export function Rooms({ api, path, role }: { api: Api; path: string; role: strin
   }
 
   return <>
-    <PageHeading title="Rooms" icon={BedDouble} subtitle="Inventory and housekeeping">
+    <PageHeading title="Rooms" image="/heroes/rooms.webp" icon={BedDouble} subtitle="Inventory and housekeeping">
       {manager && section === 'inventory' && <button onClick={() => { setSelected(undefined); setEditing(true) }}>Add room</button>}
     </PageHeading>
     <Notice text={error || feedback} />

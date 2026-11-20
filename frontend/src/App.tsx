@@ -5,7 +5,7 @@ import { createApi } from './api'
 import { AuditLog, HotelDetails, Reports, StaffDirectory, Tenants } from './Administration'
 import { CashDesk } from './CashDesk'
 import { Guests } from './Guests'
-import { Notice, SignIn, useRecords } from './components'
+import { Notice, PageHeading, SignIn, useRecords } from './components'
 import { Reservations } from './Reservations'
 import { Rooms } from './Rooms'
 import { readSession, saveSession } from './session'
@@ -100,7 +100,7 @@ function Workspace({ session, onRotate, onLogout }: {
         transition={{ duration: .22, ease: 'easeOut' }}>
         <Notice text={error} />
         {session.isSystemAdmin ? (page === 'Tenants' ? <Tenants api={api} /> : <AuditLog api={api} path="/platform" />)
-          : !hotel ? <p className="empty">No active property available.</p>
+          : !hotel ? <><PageHeading title="Properties" image="/heroes/properties.webp" icon={Building2} /><p className="empty">No active property available.</p></>
           : page === 'Rooms' ? <Rooms api={api} path={path} role={role} />
           : page === 'Reservations' && frontDesk ? <Reservations api={api} path={path} canRefund={manager} property={hotel.name} />
           : page === 'Cash desk' && frontDesk ? <CashDesk api={api} path={path} staffId={session.id} />

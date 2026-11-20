@@ -34,19 +34,30 @@
 .menu-toggle, .drawer-close, .mobile-drawer { display: none; }
 .workspace main { width: min(100%, 100rem); margin-inline: auto; padding: clamp(1rem, 3vw, 2.4rem); display: grid; gap: clamp(.85rem, 1.6vw, 1.35rem); }
 
-.overview-hero {
-  position: relative; isolation: isolate; min-height: 244px; overflow: hidden;
-  display: flex; align-items: flex-end;
+.workspace-hero {
+  position: relative; isolation: isolate; overflow: hidden;
+  display: flex;
   padding: clamp(1.25rem, 3vw, 2.15rem);
   border: 1px solid #4c426e; border-radius: var(--radius-xl);
   background: radial-gradient(ellipse at 85% 20%, #55478e 0%, #241b48 40%, #191829 80%);
   box-shadow: var(--shadow);
 }
-.overview-hero::before {
+.workspace-hero::before {
   position: absolute; z-index: -1; inset: 0; content: '';
-  background: linear-gradient(90deg, #171329 0%, #171329e0 37%, #20143e24 100%), url('/hotel-lobby.webp') center 51% / cover;
+  background: linear-gradient(90deg, #171329 0%, #171329e0 37%, #20143e24 100%), var(--hero-photo) center 51% / cover;
 }
-.overview-hero p { color: #e0d9f7; }
+.workspace-hero p { color: #e0d9f7; }
+.overview-hero { --hero-photo: url('/hotel-lobby.webp'); min-height: 244px; align-items: flex-end; }
+.page-heading { min-height: 188px; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: var(--space-5); }
+.page-heading::before { background-position: center, 62% 43%; }
+.page-heading-title { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.page-heading-title h1 { overflow-wrap: anywhere; }
+.page-heading-title p { margin-top: var(--space-1); }
+.page-icon {
+  width: clamp(2.65rem, 5vw, 3.2rem); aspect-ratio: 1;
+  display: grid; place-items: center; flex: none; border: 1px solid #685789;
+  border-radius: var(--radius); color: #d9cdff; background: #352950cc;
+}
 .hero-body { min-width: 0; max-width: 45rem; display: grid; justify-items: start; gap: .65rem; }
 .hero-date { display: inline-flex; gap: .4rem; align-items: center; font-size: .79rem; }
 .overview-hotel-name { font-size: clamp(2.05rem, 4.8vw, 4.35rem); font-weight: 785; overflow-wrap: anywhere; }
@@ -81,7 +92,7 @@
   background: radial-gradient(ellipse at 65% 45%, #4d3b73, #17152c 70%);
   padding: clamp(1.5rem, 5vw, 4rem); display: flex; flex-direction: column; justify-content: space-between; gap: 3rem;
 }
-.welcome::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg,#171226b8,#17122624 36%,#100c20ee 100%), url('/hotel-lobby.webp') 62% center / cover; }
+.welcome::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg,#171226b8,#17122624 36%,#100c20ee 100%), url('/heroes/sign-in.webp') 62% center / cover; }
 .welcome h1 { font-size: clamp(2.15rem, 5vw, 4.6rem); max-width: 13ch; }
 .welcome p { margin-top: var(--space-3); max-width: 40ch; color: #e3dcef; }
 .sign-in-form { width: min(100% - 2rem, 28rem); justify-self: center; align-self: center; padding: clamp(1rem, 3vw, 2rem); }
@@ -104,8 +115,12 @@
 @media (max-width: 650px) {
   .overview-lower { grid-template-columns: minmax(0, 1fr); }
   .hero-body { gap: .45rem; }
-  .overview-hero { min-height: 220px; }
-  .overview-hero::before { background-position: 66% center; }
+  .overview-hero { --hero-photo: url('/hotel-lobby.webp'); min-height: 220px; }
+  .workspace-hero::before {
+    background-image: linear-gradient(90deg, #171329fa 0%, #171329d8 55%, #20143e50 100%), var(--hero-photo);
+    background-position: center, 66% center;
+  }
+  .page-heading { min-height: 145px; }
   .staff-name, .account-avatar { display: none; }
   .header-location > svg { display: none; }
   .workspace-header { min-height: 60px; position: sticky; top: 0; z-index: 5; }

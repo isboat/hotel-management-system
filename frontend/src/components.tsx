@@ -1,5 +1,5 @@
 import { cloneElement, useEffect, useId, useState } from 'react'
-import type { FormEvent, ReactElement, ReactNode } from 'react'
+import type { CSSProperties, FormEvent, ReactElement, ReactNode } from 'react'
 import { CircleAlert } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { m, useReducedMotion } from 'framer-motion'
@@ -8,16 +8,16 @@ import { createApi } from './api'
 import type { Api } from './api'
 import type { Session } from './types'
 
-export function PageHeading({ title, icon: Icon, subtitle, children }: {
-  title: string; icon: LucideIcon; subtitle?: string; children?: ReactNode
+export function PageHeading({ title, image, icon: Icon, subtitle, children }: {
+  title: string; image: string; icon: LucideIcon; subtitle?: string; children?: ReactNode
 }) {
-  return <div className="page-heading">
+  return <header className="workspace-hero page-heading" style={{ '--hero-photo': `url("${image}")` } as CSSProperties}>
     <div className="page-heading-title">
       <span className="page-icon"><Icon size={22} aria-hidden="true" /></span>
       <div><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>
     </div>
-    {children}
-  </div>
+    {children && <div className="actions page-heading-actions">{children}</div>}
+  </header>
 }
 
 export function DescribedField({ label, description, children, checkbox = false }: {

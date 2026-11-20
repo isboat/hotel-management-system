@@ -21,7 +21,7 @@ export function Guests({ api, path }: { api: Api; path: string }) {
   }
 
   return <>
-    <PageHeading title="Guests" icon={ContactRound}><button onClick={() => { setGuest(undefined); setEditing(true) }}><UserPlus size={17} aria-hidden="true" /> Add guest</button></PageHeading>
+    <PageHeading title="Guests" image="/heroes/guests.webp" icon={ContactRound}><button onClick={() => { setGuest(undefined); setEditing(true) }}><UserPlus size={17} aria-hidden="true" /> Add guest</button></PageHeading>
     <label className="search">Find a guest<input value={query} onChange={event => setQuery(event.target.value)} /></label>
     <Notice text={profiles.error || detailsError || (guest ? history.error : '')} />
     {editing && <section className="panel"><h2>{guest ? 'Edit guest' : 'Add guest'}</h2>
