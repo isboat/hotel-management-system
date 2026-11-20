@@ -59,30 +59,54 @@ function StaffForm({ roles, submit }: { roles: string[]; submit: (data: unknown)
   </div></ActionForm>
 }
 
+function hotelDetails(data: FormData) {
+  return {
+    name: field(data, 'name'),
+    telephone: field(data, 'telephone'),
+    description: field(data, 'description'),
+    address: field(data, 'address'),
+  }
+}
+
+function HotelDetailsFields({ hotel }: { hotel?: Hotel }) {
+  return <>
+    <div className="fields">
+      <label>Hotel name<input name="name" required maxLength={150} defaultValue={hotel?.name} /></label>
+      <label>Telephone<input name="telephone" type="tel" maxLength={40} defaultValue={hotel?.telephone ?? ''} /></label>
+    </div>
+    <label>Description<textarea name="description" rows={3} maxLength={1000} defaultValue={hotel?.description ?? ''} /></label>
+    <label>Address<textarea name="address" rows={3} maxLength={500} defaultValue={hotel?.address ?? ''} /></label>
+  </>
+}
+
 export function Tenants({ api }: { api: Api }) {
   const { rows, error, reload } = useRecords<Hotel>(api, '/platform/properties')
   const [selected, setSelected] = useState<Hotel>()
-  const [renaming, setRenaming] = useState<Hotel>()
+  const [editingHotel, setEditingHotel] = useState<Hotel>()
   const [feedback, setFeedback] = useState('')
   return <><h1>Hotel tenants</h1><Notice text={error || feedback} />
     <section className="panel"><h2>Create a tenant</h2><ActionForm label="Create tenant" action={async data => {
-      const hotel = await api<Hotel>('/platform/properties', 'POST', { name: field(data, 'name') })
+      const hotel = await api<Hotel>('/platform/properties', 'POST', hotelDetails(data))
       setSelected(hotel); reload()
-    }}><label>Hotel name<input name="name" required /></label></ActionForm></section>
-    {renaming && <section className="panel"><h2>Edit tenant</h2>
-      <ActionForm key={renaming.id} label="Save tenant" action={async data => {
-        await api(`/platform/properties/${renaming.id}`, 'PUT', { name: field(data, 'name') })
-        setRenaming(undefined); reload()
-      }}><label>Hotel name<input name="name" defaultValue={renaming.name} required /></label></ActionForm>
-      <button className="text-button" onClick={() => setRenaming(undefined)}>Cancel</button>
+    }}><HotelDetailsFields /></ActionForm></section>
+    {editingHotel && <section className="panel"><h2>Edit tenant</h2>
+      <ActionForm key={editingHotel.id} label="Save tenant" action={async data => {
+        await api(`/platform/properties/${editingHotel.id}`, 'PUT', hotelDetails(data))
+        setEditingHotel(undefined); reload()
+      }}><HotelDetailsFields hotel={editingHotel} /></ActionForm>
+      <button className="text-button" onClick={() => setEditingHotel(undefined)}>Cancel</button>
     </section>}
     {selected && <section className="panel"><h2>Assign administrator · {selected.name}</h2>
       <StaffForm roles={['Administrator']} submit={async data => {
         await api(`/platform/properties/${selected.id}/administrator`, 'POST', data); setSelected(undefined)
       }} /><button className="text-button" onClick={() => setSelected(undefined)}>Close</button></section>}
     <div className="record-list">{rows.map(hotel => <article className="panel record" key={hotel.id}>
-      <div><h2>{hotel.name}</h2><p>{hotel.archived ? 'Archived' : hotel.suspended ? 'Suspended' : 'Active'}</p></div>
-      <div className="actions"><button className="secondary" onClick={() => setRenaming(hotel)}>Edit</button><button className="secondary" disabled={hotel.archived || hotel.suspended} onClick={() => setSelected(hotel)}>Assign administrator</button>
+      <div><h2>{hotel.name}</h2><p>{hotel.archived ? 'Archived' : hotel.suspended ? 'Suspended' : 'Active'}</p>
+        {hotel.telephone && <p>Telephone {hotel.telephone}</p>}
+        {hotel.address && <p className="multiline-text">{hotel.address}</p>}
+        {hotel.description && <p className="multiline-text">{hotel.description}</p>}
+      </div>
+      <div className="actions"><button className="secondary" onClick={() => setEditingHotel(hotel)}>Edit</button><button className="secondary" disabled={hotel.archived || hotel.suspended} onClick={() => setSelected(hotel)}>Assign administrator</button>
         <label>Tenant status<select value={hotel.archived ? 'Archived' : hotel.suspended ? 'Suspended' : 'Active'} onChange={async event => {
           const status = event.target.value
           if (status === 'Archived' && !confirm(`Archive ${hotel.name}?`)) return
@@ -98,13 +122,23 @@ export function AuditLog({ api, path }: { api: Api; path: string }) {
   const [query, setQuery] = useState('')
   const { rows, error } = useRecords<Audit>(api, `${path}/audit`)
   return <><h1>Audit log</h1><Notice text={error} />
-    <div className="fields"><label>Filter activity<input value={query} onChange={event => setQuery(event.target.value)} placeholder="Action, path or user ID" /></label>
+    <div className="fields"><label>Filter activity<input value={query} onChange={event => setQuery(event.target.value)} placeholder="Name, email or action" /></label>
       <label>Outcome<select value={outcome} onChange={event => setOutcome(event.target.value)}><option value="">All outcomes</option><option value="success">Successful</option><option value="failure">Failed or denied</option></select></label></div>
     <div className="record-list">{rows.filter(row =>
       (!outcome || (outcome === 'success' ? row.outcome < 400 : row.outcome >= 400)) &&
-      `${row.action} ${row.target} ${row.staffId ?? ''}`.toLowerCase().includes(query.toLowerCase())
-    ).map(row => <article className="panel record" key={row.id}><div><h2>{row.action} · {row.outcome}</h2>
-      <p className="break-anywhere">{row.target}</p><p>User {row.staffId ?? 'unknown'}</p></div><time dateTime={row.utc}>{new Date(row.utc).toLocaleString()}</time></article>)}</div>
+      `${row.action} ${row.staffName ?? ''} ${row.staffEmail ?? ''}`.toLowerCase().includes(query.toLowerCase())
+    ).map(row => {
+      const actor = row.staffName ? `${row.staffName}${row.staffEmail ? ` (${row.staffEmail.toLowerCase()})` : ''}` : 'Unknown user'
+      const timestamp = /(?:Z|[+-]\d{2}:\d{2})$/i.test(row.utc) ? row.utc : `${row.utc}Z`
+      const date = new Date(timestamp)
+      const day = date.toLocaleDateString('en-GH', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Africa/Accra' })
+      const time = date.toLocaleTimeString('en-GH', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Africa/Accra' })
+      const action = /^[A-Z]+$/.test(row.action) ? `made a ${row.action} request` : row.action
+      return <article className="panel record" key={row.id}><div>
+        <p className="break-anywhere"><strong>{actor}</strong> {action} on <time dateTime={timestamp}>{day} at {time}</time></p>
+        {row.outcome >= 400 && <span className="status">Failed ({row.outcome})</span>}
+      </div></article>
+    })}</div>
     {!rows.length && <p className="empty">No recorded activity yet.</p>}
   </>
 }

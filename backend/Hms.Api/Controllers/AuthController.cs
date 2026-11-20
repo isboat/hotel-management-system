@@ -16,6 +16,7 @@ public sealed class AuthController(HotelDatabase database, IPasswordHasher<Staff
     /// <summary>Validates staff credentials and issues a short-lived signed access token.</summary>
     [EnableRateLimiting("credentials")]
     [HttpPost("login")]
+    [AuditAction("logged in", "log in")]
     public async Task<IActionResult> Login(Credentials input)
     {
         var email = input.Email.Trim().ToUpperInvariant();
@@ -55,6 +56,7 @@ public sealed class AuthController(HotelDatabase database, IPasswordHasher<Staff
 
     [Authorize]
     [HttpPost("logout")]
+    [AuditAction("signed out", "sign out")]
     public async Task<IActionResult> Logout()
     {
         await database.Staff.Where(row => row.Id == TenantAccess.Actor(User))
@@ -65,6 +67,7 @@ public sealed class AuthController(HotelDatabase database, IPasswordHasher<Staff
     /// <summary>Consumes a reset code and invalidates all prior access tokens.</summary>
     [EnableRateLimiting("credentials")]
     [HttpPost("reset")]
+    [AuditAction("reset their password", "reset their password")]
     public async Task<IActionResult> Reset(ResetInput input)
     {
         var digest = SessionTokens.Digest(input.Code);

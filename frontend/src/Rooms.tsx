@@ -30,7 +30,7 @@ export function Rooms({ api, path, role }: { api: Api; path: string; role: strin
       <ActionForm key={selected?.id ?? 'new'} label="Save room" action={async data => {
         await api(`${path}/rooms${selected ? `/${selected.id}` : ''}`, selected ? 'PUT' : 'POST', {
           number: field(data, 'number'), type: field(data, 'type'), capacity: Number(field(data, 'capacity')),
-          rate: toPesewas(field(data, 'rate')), outOfService: data.has('closed'),
+          description: field(data, 'description'), rate: toPesewas(field(data, 'rate')), outOfService: data.has('closed'),
         })
         setEditing(false)
         reload()
@@ -41,6 +41,7 @@ export function Rooms({ api, path, role }: { api: Api; path: string; role: strin
           <label>Capacity<input name="capacity" type="number" min="1" max="100" defaultValue={selected?.capacity ?? 2} required /></label>
           <label>Nightly rate (GHS)<input name="rate" inputMode="decimal" required defaultValue={selected ? selected.rate / 100 : ''} /></label>
         </div>
+        <label>Room description<textarea name="description" rows={3} maxLength={1000} defaultValue={selected?.description ?? ''} /></label>
         <label className="check"><input name="closed" type="checkbox" defaultChecked={selected?.outOfService} /> Out of service</label>
       </ActionForm>
       <button className="text-button" onClick={() => setEditing(false)}>Cancel</button>
@@ -50,7 +51,9 @@ export function Rooms({ api, path, role }: { api: Api; path: string; role: strin
       <article className="panel room-card" key={room.id}>
         <div className="section-title"><BedDouble size={22} /><span className="status">{room.outOfService ? 'Out of service' : room.status}</span></div>
         <h2>Room {room.number}</h2>
-        <p>{room.type} · Sleeps {room.capacity}</p><strong>{currency(room.rate)} / night</strong>
+        <p>{room.type} · Sleeps {room.capacity}</p>
+        {room.description && <p className="multiline-text">{room.description}</p>}
+        <strong>{currency(room.rate)} / night</strong>
         {canClean && <label>Housekeeping status<select value={room.status} onChange={event => void update(`/rooms/${room.id}/housekeeping`, 'PATCH', { status: event.target.value })}>
           <option>Dirty</option><option>Clean</option>{(role !== 'Housekeeping' || room.status === 'Inspected') && <option disabled={role === 'Housekeeping'}>Inspected</option>}
         </select></label>}

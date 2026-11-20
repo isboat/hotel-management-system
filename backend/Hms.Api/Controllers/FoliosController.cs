@@ -15,11 +15,13 @@ public sealed class FoliosController(HotelDatabase database, TenantAccess access
     private Task<bool> CanOperate(Guid hotelId) => access.Allows(User, hotelId, "Manager", "FrontDesk", "Administrator");
 
     [HttpGet]
+    [AuditAction("viewed a guest folio", "view a guest folio")]
     public async Task<IActionResult> Folio(Guid hotelId, Guid reservationId)
     {
         if (!await CanOperate(hotelId)) return Forbid();
         var stay = await database.Reservations.FindAsync(hotelId, reservationId);
         if (stay is null) return NotFound();
+        AuditActionAttribute.Describe(HttpContext, $"viewed the folio for guest ({stay.Guest})");
         var payments = await database.Payments.Where(row => row.HotelId == hotelId && row.ReservationId == reservationId)
             .OrderBy(row => row.Utc).ToListAsync();
         var charges = await database.Charges.Where(row => row.HotelId == hotelId && row.ReservationId == reservationId).ToListAsync();
@@ -29,6 +31,7 @@ public sealed class FoliosController(HotelDatabase database, TenantAccess access
 
     /// <summary>Records physical cash and returns the same receipt for a matching retry.</summary>
     [HttpPost("payments")]
+    [AuditAction("", "record a cash payment")]
     public async Task<IActionResult> RecordCash(Guid hotelId, Guid reservationId, PaymentInput input)
     {
         if (!await CanOperate(hotelId)) return Forbid();
@@ -51,7 +54,7 @@ public sealed class FoliosController(HotelDatabase database, TenantAccess access
         var payment = new CashPayment(hotelId, Guid.NewGuid(), reservationId, TenantAccess.Actor(User)!.Value, shift.Id,
             input.Reference, input.Amount, input.Tendered, DateTime.UtcNow);
         database.Payments.Add(payment);
-        RecordFinancialEvent(hotelId, payment.Id, "Cash payment");
+        RecordFinancialEvent(hotelId, payment.Id, "recorded a cash payment");
         try
         {
             await database.SaveChangesAsync();
@@ -62,6 +65,7 @@ public sealed class FoliosController(HotelDatabase database, TenantAccess access
     }
 
     [HttpPost("charges")]
+    [AuditAction("", "post a folio charge")]
     public async Task<IActionResult> PostCharge(Guid hotelId, Guid reservationId, ChargeInput input)
     {
         if (!await CanOperate(hotelId)) return Forbid();
@@ -71,7 +75,7 @@ public sealed class FoliosController(HotelDatabase database, TenantAccess access
         if (stay.Status is "Cancelled" or "CheckedOut") return Conflict("This folio is closed.");
         var charge = new FolioCharge(hotelId, Guid.NewGuid(), reservationId, input.Description.Trim(), input.Amount);
         database.Charges.Add(charge);
-        RecordFinancialEvent(hotelId, charge.Id, "Folio charge");
+        RecordFinancialEvent(hotelId, charge.Id, "posted a folio charge");
         await database.SaveChangesAsync();
         await transaction.CommitAsync();
         return Ok(charge);
@@ -79,6 +83,7 @@ public sealed class FoliosController(HotelDatabase database, TenantAccess access
 
     /// <summary>Records a physical refund against a prior receipt without altering that receipt.</summary>
     [HttpPost("refunds")]
+    [AuditAction("", "record a cash refund")]
     public async Task<IActionResult> Refund(Guid hotelId, Guid reservationId, RefundInput input)
     {
         if (!await access.Allows(User, hotelId, "Manager", "Administrator")) return Forbid();
@@ -98,7 +103,7 @@ public sealed class FoliosController(HotelDatabase database, TenantAccess access
         var refund = new CashPayment(hotelId, Guid.NewGuid(), reservationId, TenantAccess.Actor(User)!.Value, shift.Id,
             input.Reference, -input.Amount, 0, DateTime.UtcNow, original.Id, input.Reason.Trim());
         database.Payments.Add(refund);
-        RecordFinancialEvent(hotelId, refund.Id, "Cash refund");
+        RecordFinancialEvent(hotelId, refund.Id, "recorded a cash refund");
         try
         {
             await database.SaveChangesAsync();

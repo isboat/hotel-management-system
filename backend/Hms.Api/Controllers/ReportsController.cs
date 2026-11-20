@@ -11,16 +11,24 @@ namespace Hms.Api.Controllers;
 public sealed class ReportsController(HotelDatabase database, TenantAccess access) : ControllerBase
 {
     [HttpGet("audit")]
+    [AuditAction("viewed the audit log", "view the audit log")]
     public async Task<IActionResult> Audit(Guid hotelId, Guid? userId, int? outcome)
     {
         if (!await access.Allows(User, hotelId, "Administrator")) return Forbid();
-        var events = database.Audit.Where(row => row.HotelId == hotelId && !row.Target.StartsWith("/api/v1/platform"));
+        var events = database.Audit.Where(row => (row.HotelId == hotelId && !row.Target.StartsWith("/api/v1/platform")) ||
+            (row.HotelId == null && row.Action == "logged in" && database.Memberships.Any(member =>
+                member.HotelId == hotelId && member.StaffId == row.StaffId && member.Active)));
         if (userId.HasValue) events = events.Where(row => row.StaffId == userId);
         if (outcome.HasValue) events = events.Where(row => row.Outcome == outcome);
-        return Ok(await events.OrderByDescending(row => row.Utc).Take(100).ToListAsync());
+        var propertyStaff = database.Staff.Where(actor =>
+            database.Memberships.Any(member => member.HotelId == hotelId && member.StaffId == actor.Id) ||
+            database.Audit.Any(row => row.HotelId == hotelId && row.StaffId == actor.Id && row.Outcome < 400 &&
+                !row.Target.StartsWith("/api/v1/platform")));
+        return Ok(await AuditLogEntry.WithStaff(events, propertyStaff).ToListAsync());
     }
 
     [HttpGet("reports/occupancy")]
+    [AuditAction("ran the occupancy report", "run the occupancy report")]
     public async Task<IActionResult> Occupancy(Guid hotelId, DateOnly arrival, DateOnly departure)
     {
         if (!await access.Allows(User, hotelId, "Manager", "Administrator")) return Forbid();

@@ -19,10 +19,11 @@ public sealed class RoomsController(HotelDatabase database, TenantAccess access)
             : Forbid();
 
     [HttpPost("rooms")]
+    [AuditAction("added a room", "add a room")]
     public async Task<IActionResult> Add(Guid hotelId, RoomInput input)
     {
         if (!await access.Allows(User, hotelId, "Manager", "Administrator")) return Forbid();
-        var room = new Room(hotelId, Guid.NewGuid(), input.Number.Trim(), input.Type.Trim(), input.Capacity, input.Rate, OutOfService: input.OutOfService);
+        var room = new Room(hotelId, Guid.NewGuid(), input.Number.Trim(), input.Type.Trim(), input.Capacity, input.Rate, OutOfService: input.OutOfService, Description: NormalizeDescription(input.Description));
         database.Rooms.Add(room);
         try { await database.SaveChangesAsync(); }
         catch (DbUpdateException) { return Conflict("Room number is already in use."); }
@@ -31,18 +32,21 @@ public sealed class RoomsController(HotelDatabase database, TenantAccess access)
 
     /// <summary>Closes or reopens a room without invalidating a current or future booking.</summary>
     [HttpPut("rooms/{roomId:guid}")]
+    [AuditAction("updated a room", "update a room")]
     public async Task<IActionResult> Edit(Guid hotelId, Guid roomId, RoomInput input)
     {
         if (!await access.Allows(User, hotelId, "Manager", "Administrator")) return Forbid();
         await using var transaction = await database.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         if (input.OutOfService && await HasBookings(hotelId, roomId)) return Conflict("Resolve current and future bookings first.");
+        var description = NormalizeDescription(input.Description);
         int updated;
         try
         {
             updated = await database.Rooms.Where(row => row.HotelId == hotelId && row.Id == roomId && !row.Archived)
                 .ExecuteUpdateAsync(set => set.SetProperty(row => row.Number, input.Number.Trim())
                     .SetProperty(row => row.Type, input.Type.Trim()).SetProperty(row => row.Capacity, input.Capacity)
-                    .SetProperty(row => row.Rate, input.Rate).SetProperty(row => row.OutOfService, input.OutOfService));
+                    .SetProperty(row => row.Rate, input.Rate).SetProperty(row => row.OutOfService, input.OutOfService)
+                    .SetProperty(row => row.Description, description));
         }
         catch (Microsoft.Data.SqlClient.SqlException exception) when (exception.Number is 1205 or 2601 or 2627)
         {
@@ -53,6 +57,7 @@ public sealed class RoomsController(HotelDatabase database, TenantAccess access)
     }
 
     [HttpDelete("rooms/{roomId:guid}")]
+    [AuditAction("removed a room", "remove a room")]
     public async Task<IActionResult> Remove(Guid hotelId, Guid roomId)
     {
         if (!await access.Allows(User, hotelId, "Manager", "Administrator")) return Forbid();
@@ -71,6 +76,7 @@ public sealed class RoomsController(HotelDatabase database, TenantAccess access)
     }
 
     [HttpPatch("rooms/{roomId:guid}/housekeeping")]
+    [AuditAction("updated housekeeping status", "update housekeeping status")]
     public async Task<IActionResult> Housekeeping(Guid hotelId, Guid roomId, StatusInput input)
     {
         if (!await access.Allows(User, hotelId, "Housekeeping", "Supervisor", "Manager", "Administrator")) return Forbid();
@@ -89,6 +95,7 @@ public sealed class RoomsController(HotelDatabase database, TenantAccess access)
             : Forbid();
 
     [HttpPost("maintenance")]
+    [AuditAction("reported a maintenance issue", "report a maintenance issue")]
     public async Task<IActionResult> ReportIssue(Guid hotelId, MaintenanceInput input)
     {
         if (!await access.Allows(User, hotelId, "Housekeeping", "Supervisor", "Manager", "Administrator")) return Forbid();
@@ -98,6 +105,8 @@ public sealed class RoomsController(HotelDatabase database, TenantAccess access)
         await database.SaveChangesAsync();
         return Ok(issue);
     }
+
+    private static string? NormalizeDescription(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private Task<bool> HasBookings(Guid hotelId, Guid roomId)
     {

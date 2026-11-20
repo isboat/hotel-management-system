@@ -37,6 +37,13 @@ public sealed class HotelApiTests
             await SignIn(platform, "platform@example.test", password);
             var hotel = await CreateHotel(platform, "Accra Lodge");
             var other = await CreateHotel(platform, "Kumasi Lodge");
+            var detailsUpdate = new { name = "Accra Lodge", telephone = "+233 24 123 4567", description = "A small guest house", address = "12 High Street, Accra" };
+            Assert.Equal(HttpStatusCode.NoContent, (await platform.PutAsJsonAsync($"/api/v1/platform/properties/{hotel}", detailsUpdate)).StatusCode);
+            var tenants = await Read(await platform.GetAsync("/api/v1/platform/properties"));
+            var updatedHotel = Assert.Single(tenants.EnumerateArray(), row => row.GetProperty("id").GetString() == hotel);
+            Assert.Equal(detailsUpdate.telephone, updatedHotel.GetProperty("telephone").GetString());
+            Assert.Equal(detailsUpdate.description, updatedHotel.GetProperty("description").GetString());
+            Assert.Equal(detailsUpdate.address, updatedHotel.GetProperty("address").GetString());
             Assert.Equal(HttpStatusCode.OK, (await platform.PostAsJsonAsync($"/api/v1/platform/properties/{hotel}/administrator",
                 new { email = "admin@example.test", name = "Property Admin", role = "Administrator", password })).StatusCode);
             var session = await SignIn(staff, "admin@example.test", password);
@@ -46,10 +53,25 @@ public sealed class HotelApiTests
             Assert.Equal(HttpStatusCode.Unauthorized, (await staff.PostAsJsonAsync("/api/v1/auth/refresh", refresh)).StatusCode);
             var path = $"/api/v1/properties/{hotel}";
             Assert.Equal(HttpStatusCode.Forbidden, (await staff.PostAsJsonAsync("/api/v1/platform/properties", new { name = "Denied" })).StatusCode);
-            Assert.Equal(HttpStatusCode.NoContent, (await staff.PostAsJsonAsync($"{path}/activity", new { screen = "Overview", interaction = "View" })).StatusCode);
+            var guest = await Read(await staff.PostAsJsonAsync($"{path}/guests", new { name = "Smith", idNumber = "  GHA-00123  " }));
+            var guestId = guest.GetProperty("id").GetGuid();
+            var details = await Read(await staff.GetAsync($"{path}/guests/{guestId}"));
+            Assert.Equal("GHA-00123", details.GetProperty("idNumber").GetString());
+            var directoryListing = await Read(await staff.GetAsync($"{path}/guests"));
+            Assert.False(Assert.Single(directoryListing.EnumerateArray()).TryGetProperty("idNumber", out _));
+            Assert.Equal(HttpStatusCode.NoContent, (await staff.PutAsJsonAsync($"{path}/guests/{guestId}",
+                new { name = "Smith", idNumber = "000123" })).StatusCode);
+            var updated = await Read(await staff.GetAsync($"{path}/guests/{guestId}"));
+            Assert.Equal("000123", updated.GetProperty("idNumber").GetString());
+            Assert.Equal(HttpStatusCode.Forbidden, (await staff.GetAsync($"/api/v1/properties/{other}/guests/{guestId}")).StatusCode);
             Assert.Equal(HttpStatusCode.Forbidden, (await staff.GetAsync($"/api/v1/properties/{other}/rooms")).StatusCode);
-            var room = await Read(await staff.PostAsJsonAsync($"{path}/rooms", new { number = "101", type = "Double", capacity = 2, rate = 35000 }));
+            var room = await Read(await staff.PostAsJsonAsync($"{path}/rooms", new { number = "101", type = "Double", capacity = 2, rate = 35000, description = "  Garden view  " }));
+            Assert.Equal("Garden view", room.GetProperty("description").GetString());
             var roomId = room.GetProperty("id").GetString();
+            Assert.Equal(HttpStatusCode.NoContent, (await staff.PutAsJsonAsync($"{path}/rooms/{roomId}",
+                new { number = "101", type = "Double", capacity = 2, rate = 35000, description = "Garden view and balcony" })).StatusCode);
+            var rooms = await Read(await staff.GetAsync($"{path}/rooms"));
+            Assert.Equal("Garden view and balcony", Assert.Single(rooms.EnumerateArray()).GetProperty("description").GetString());
             var booking = new { roomId, guest = "Test guest", arrival = "2026-12-03", departure = "2026-12-04" };
             var results = await Task.WhenAll(
                 staff.PostAsJsonAsync($"{path}/reservations", booking),
@@ -102,7 +124,14 @@ public sealed class HotelApiTests
             Assert.Equal("Hotel Management API", swagger.GetProperty("info").GetProperty("title").GetString());
             var audit = await Read(await staff.GetAsync($"{path}/audit"));
             Assert.Contains(audit.EnumerateArray(), row => row.GetProperty("outcome").GetInt32() == 409);
-            Assert.Contains(audit.EnumerateArray(), row => row.GetProperty("action").GetString() == "UI View");
+            Assert.DoesNotContain("GHA-00123", audit.GetRawText());
+            Assert.DoesNotContain("000123", audit.GetRawText());
+            Assert.Contains(audit.EnumerateArray(), row => row.GetProperty("action").GetString() == "logged in" &&
+                row.GetProperty("staffName").GetString() == "Property Admin");
+            Assert.Contains(audit.EnumerateArray(), row => row.GetProperty("action").GetString() == "assigned guest (Test guest) to Room 101");
+            Assert.Contains(audit.EnumerateArray(), row => row.GetProperty("action").GetString() == "viewed guest (Smith) details" &&
+                row.GetProperty("staffName").GetString() == "Property Admin" &&
+                row.GetProperty("staffEmail").GetString() == "ADMIN@EXAMPLE.TEST");
             Assert.Equal(HttpStatusCode.NoContent, (await platform.PatchAsJsonAsync($"/api/v1/platform/properties/{hotel}", new { status = "Suspended" })).StatusCode);
             Assert.Equal(HttpStatusCode.Forbidden, (await staff.GetAsync($"{path}/rooms")).StatusCode);
         }

@@ -23,7 +23,11 @@ public sealed class HotelDatabase(DbContextOptions<HotelDatabase> options) : DbC
 
     protected override void OnModelCreating(ModelBuilder model)
     {
+        model.Entity<Hotel>().Property(row => row.Telephone).HasMaxLength(40);
+        model.Entity<Hotel>().Property(row => row.Description).HasMaxLength(1000);
+        model.Entity<Hotel>().Property(row => row.Address).HasMaxLength(500);
         model.Entity<Staff>().Property(row => row.Email).HasMaxLength(254);
+        model.Entity<Room>().Property(row => row.Description).HasMaxLength(1000);
         model.Entity<Room>().Property(row => row.Number).HasMaxLength(30);
         model.Entity<CashPayment>().Property(row => row.Reference).HasMaxLength(80);
         model.Entity<PasswordReset>().Property(row => row.Digest).HasMaxLength(64);
@@ -35,6 +39,7 @@ public sealed class HotelDatabase(DbContextOptions<HotelDatabase> options) : DbC
         model.Entity<Room>().HasKey(row => new { row.HotelId, row.Id });
         model.Entity<Room>().HasIndex(row => new { row.HotelId, row.Number }).IsUnique();
         model.Entity<Room>().HasOne<Hotel>().WithMany().HasForeignKey(row => row.HotelId);
+        model.Entity<GuestProfile>().Property(row => row.IdNumber).HasMaxLength(64);
         model.Entity<GuestProfile>().HasKey(row => new { row.HotelId, row.Id });
         model.Entity<GuestProfile>().HasOne<Hotel>().WithMany().HasForeignKey(row => row.HotelId);
         model.Entity<Reservation>().HasOne<GuestProfile>().WithMany().HasForeignKey(row => new { row.HotelId, row.GuestId }).OnDelete(DeleteBehavior.Restrict);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { BedDouble, Building2, CalendarDays, ChartNoAxesCombined, ClipboardList, LayoutDashboard, LogOut, Users, Wallet } from 'lucide-react'
 import { createApi, today } from './api'
 import type { Api } from './api'
@@ -34,16 +34,6 @@ function Workspace({ session, onLogout }: { session: Session; onLogout: () => vo
       ...(manager ? [{ name: 'Staff', icon: Users }, { name: 'Reports', icon: ChartNoAxesCombined }] : []),
       ...(role === 'Administrator' ? [{ name: 'Audit log', icon: ClipboardList }] : []),
     ]
-  const activityPath = session.isSystemAdmin ? '/platform/activity' : path && `${path}/activity`
-  function recordInteraction(interaction: string) {
-    if (activityPath) void api(activityPath, 'POST', { screen: page, interaction }).catch(() =>
-      setActivityError('Some activity could not be recorded.'))
-  }
-  const [activityError, setActivityError] = useState('')
-  useEffect(() => {
-    if (activityPath) void api(activityPath, 'POST', { screen: page, interaction: 'View' }).catch(() =>
-      setActivityError('Some activity could not be recorded.'))
-  }, [activityPath, page, api])
   return <div className="shell">
     <aside className="sidebar">
       <span className="brand"><Building2 size={21} /> Hotel Management</span>
@@ -61,18 +51,8 @@ function Workspace({ session, onLogout }: { session: Session; onLogout: () => vo
           catch { /* The local session is cleared even if server invalidation fails. */ }
           finally { onLogout() }
         }}><LogOut size={16} /> Sign out</button></div></header>
-      <main key={hotel?.id ?? 'platform'}
-        onClickCapture={event => {
-          if (event.target instanceof Element && event.target.closest('button')) recordInteraction('Click')
-        }}
-        onBlurCapture={event => {
-          if (event.target instanceof HTMLInputElement && event.target.type === 'text') recordInteraction('Change')
-        }}
-        onChangeCapture={event => {
-          if (!(event.target instanceof HTMLInputElement) || event.target.type !== 'text') recordInteraction('Change')
-        }}
-        onSubmitCapture={() => recordInteraction('Submit')}>
-        <Notice text={error || activityError} />
+      <main key={hotel?.id ?? 'platform'}>
+        <Notice text={error} />
         {session.isSystemAdmin ? (page === 'Tenants' ? <Tenants api={api} /> : <AuditLog api={api} path="/platform" />)
           : !hotel ? <p className="empty">No active property available.</p>
           : page === 'Rooms' ? <Rooms api={api} path={path} role={role} />

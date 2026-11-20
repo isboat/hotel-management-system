@@ -1,9 +1,9 @@
 export type Session = { id: string; token: string; refreshToken: string; name: string; isSystemAdmin: boolean }
-export type Hotel = { id: string; name: string; role?: string; suspended?: boolean; archived?: boolean }
-export type Room = { id: string; number: string; type: string; capacity: number; rate: number; status: string; outOfService: boolean }
+export type Hotel = { id: string; telephone?: string | null; description?: string | null; address?: string | null; name: string; role?: string; suspended?: boolean; archived?: boolean }
+export type Room = { id: string; description?: string | null; number: string; type: string; capacity: number; rate: number; status: string; outOfService: boolean }
 export type Stay = { id: string; roomId: string; guest: string; arrival: string; departure: string; total: number; status: string }
 export type Staff = { id: string; name: string; email: string; role: string; active: boolean }
 export type Receipt = { id: string; cashierId: string; amount: number; tendered: number; utc: string; originalPaymentId?: string }
 export type Folio = { total: number; balance: number; payments: Receipt[]; charges: { id: string; description: string; amount: number }[] }
-export type Audit = { id: string; utc: string; staffId?: string; action: string; target: string; outcome: number }
-export type Guest = { id: string; name: string; email?: string; phone?: string; preferences?: string; marketingOptIn: boolean }
+export type Audit = { id: string; utc: string; staffId?: string; staffName?: string; staffEmail?: string; action: string; target: string; outcome: number }
+export type Guest = { id: string; idNumber?: string | null; name: string; email?: string; phone?: string; preferences?: string; marketingOptIn: boolean }

@@ -14,29 +14,40 @@ public sealed class PlatformController(HotelDatabase database) : ControllerBase
     private Task<bool> IsAdministrator() => database.Staff.AnyAsync(row => row.Id == TenantAccess.Actor(User) && row.IsSystemAdmin);
 
     [HttpGet("properties")]
+    [AuditAction("viewed hotel tenants", "view hotel tenants")]
     public async Task<IActionResult> List() =>
         await IsAdministrator() ? Ok(await database.Hotels.OrderBy(row => row.Name).ToListAsync()) : Forbid();
 
     [HttpPost("properties")]
+    [AuditAction("created a hotel tenant", "create a hotel tenant")]
     public async Task<IActionResult> Create(HotelInput input)
     {
         if (!await IsAdministrator()) return Forbid();
-        var hotel = new Hotel(Guid.NewGuid(), input.Name.Trim());
+        var hotel = new Hotel(Guid.NewGuid(), input.Name.Trim(), Telephone: Normalize(input.Telephone),
+            Description: Normalize(input.Description), Address: Normalize(input.Address));
         database.Hotels.Add(hotel);
         await database.SaveChangesAsync();
         return Ok(hotel);
     }
 
     [HttpPut("properties/{hotelId:guid}")]
-    public async Task<IActionResult> Rename(Guid hotelId, HotelInput input)
+    [AuditAction("updated hotel details", "update hotel details")]
+    public async Task<IActionResult> Edit(Guid hotelId, HotelInput input)
     {
         if (!await IsAdministrator()) return Forbid();
+        var telephone = Normalize(input.Telephone);
+        var description = Normalize(input.Description);
+        var address = Normalize(input.Address);
         var updated = await database.Hotels.Where(row => row.Id == hotelId)
-            .ExecuteUpdateAsync(set => set.SetProperty(row => row.Name, input.Name.Trim()));
+            .ExecuteUpdateAsync(set => set.SetProperty(row => row.Name, input.Name.Trim())
+                .SetProperty(row => row.Telephone, telephone)
+                .SetProperty(row => row.Description, description)
+                .SetProperty(row => row.Address, address));
         return updated == 0 ? NotFound() : NoContent();
     }
 
     [HttpPatch("properties/{hotelId:guid}")]
+    [AuditAction("changed a hotel tenant’s status", "change a hotel tenant’s status")]
     public async Task<IActionResult> ChangeStatus(Guid hotelId, StatusInput input)
     {
         if (!await IsAdministrator()) return Forbid();
@@ -48,7 +59,9 @@ public sealed class PlatformController(HotelDatabase database) : ControllerBase
     }
 
     [HttpGet("audit")]
+    [AuditAction("viewed the platform audit log", "view the platform audit log")]
     public async Task<IActionResult> Audit() =>
-        await IsAdministrator() ? Ok(await database.Audit.Where(row => row.HotelId == null || row.Target.StartsWith("/api/v1/platform"))
-            .OrderByDescending(row => row.Utc).Take(100).ToListAsync()) : Forbid();
+        await IsAdministrator() ? Ok(await AuditLogEntry.WithStaff(database.Audit.Where(row => row.HotelId == null || row.Target.StartsWith("/api/v1/platform")), database.Staff)
+            .ToListAsync()) : Forbid();
+    private static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

@@ -51,6 +51,24 @@ Open `http://localhost:5080/swagger` for Swagger UI, `/swagger/v1/swagger.json` 
 
 Open a cash shift before posting a cash payment or refund. Amounts in the API are integer pesewas. A retry of a cash payment or refund must reuse the original reference.
 
+### Troubleshoot a 401 on first sign-in
+
+A `401 Unauthorized` at sign-in means the account could not be found or the password did not match. The bootstrap account has no default password. At startup, the API creates the account only if `Bootstrap__Email` is set, `Bootstrap__Password` has at least 12 characters, and the database has no system administrator.
+
+Stop the API with `Ctrl+C`, then rerun the setup commands above in the same terminal you use to start it. Sign in with `admin@example.test` and the password you entered at the prompt. If you start the API from an IDE, set the environment variables in the IDE's run configuration.
+
+If sign-in still fails with the default local SQLite setup, stop the API and point it at a fresh SQLite file. This preserves the original database.
+
+```powershell
+$env:ConnectionStrings__Local = "Data Source=hms-first-login.db"
+```
+
+```bash
+export ConnectionStrings__Local="Data Source=hms-first-login.db"
+```
+
+Restart the API in the same terminal with the bootstrap variables still set. If the credentials work with the fresh database, the original database likely already had a system administrator. Changing the bootstrap password does not reset an existing account.
+
 ## Tests
 
 ```sh
@@ -85,4 +103,4 @@ Set the `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, and `AZUR
 
 Passwords use ASP.NET Core Identity's password hasher. The API issues short-lived JWTs and rotating, hashed refresh credentials. The React client keeps both credentials in memory for the separate Azure origins. Reloading the page requires sign-in. Password reset codes are single-use and issued for private delivery by authorised staff. Sign-out and successful reset invalidate prior sessions.
 
-The API records method, route, actor when known, and outcome for API requests. The authenticated workspace also records views, form submissions, and control interactions without field contents. Successful cash and charge events also have transactional audit records. OTA synchronisation, automated password reset delivery, marketing campaigns, and historical room-capacity reporting still need implementation. The current occupancy report uses booked nights and current bookable room inventory.
+The API records named actions such as sign-ins, guest detail views, room assignments, and failed attempts. Authorised readers see the actor’s current staff name and email alongside each event. Guest names and room numbers provide context without logging guest contact details or credentials. Successful cash and charge events also have transactional audit records. OTA synchronisation, automated password reset delivery, marketing campaigns, and historical room-capacity reporting still need implementation. The current occupancy report uses booked nights and current bookable room inventory.

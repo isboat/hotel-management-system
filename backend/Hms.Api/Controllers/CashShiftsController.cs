@@ -24,6 +24,7 @@ public sealed class CashShiftsController(HotelDatabase database, TenantAccess ac
     }
 
     [HttpPost]
+    [AuditAction("opened a cash shift", "open a cash shift")]
     public async Task<IActionResult> Open(Guid hotelId, CashCountInput input)
     {
         if (!await CanOperate(hotelId)) return Forbid();
@@ -36,6 +37,7 @@ public sealed class CashShiftsController(HotelDatabase database, TenantAccess ac
 
     /// <summary>Reconciles the physical count against recorded cash in the shift.</summary>
     [HttpPost("{shiftId:guid}/close")]
+    [AuditAction("closed a cash shift", "close a cash shift")]
     public async Task<IActionResult> Close(Guid hotelId, Guid shiftId, CashCountInput input)
     {
         if (!await CanOperate(hotelId)) return Forbid();

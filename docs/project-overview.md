@@ -17,7 +17,7 @@ Each hotel or guest house is a separate tenant. A single HMS deployment serves m
 - **Reporting and analytics.** Generate financial reports and track room performance. Occupancy is rooms sold divided by rooms available, expressed as a percentage. Average daily rate (ADR) is room revenue divided by rooms sold. Revenue per available room (RevPAR) is room revenue divided by rooms available. Use figures from the same reporting period when comparing these metrics.
 - **Guest relationship management (CRM) and marketing.** Keep guest contact details, preferences, and stay history so staff can personalise service and support loyalty programmes or marketing campaigns. Record marketing preferences so staff can respect guests' communication choices.
 
-- **User activity audit log.** Keep a searchable record of every user action across all modules, including reads, changes, exports, and unsuccessful attempts.
+- **User activity audit log.** Keep a searchable record of meaningful user actions across modules, including sign-ins, guest detail views, room assignments, and unsuccessful attempts.
 
 ## Primary users and responsibilities
 
@@ -111,7 +111,7 @@ ASP.NET Core JWT bearer authentication validates the token signature, expected a
 
 ### User activity audit log
 
-Record every user action across all roles and modules. Capture sign-in attempts, sign-outs, views, searches, exports, record changes, payments, and administrative actions, including denied and failed attempts. Capture user actions that occur entirely in React through an audit endpoint. Record API-backed actions on the server using the authenticated identity and actual outcome.
+Record meaningful actions on the server using the authenticated identity and actual outcome. Capture sign-in attempts, sign-outs, guest detail views, room assignments, reservation changes, payments, and administrative actions, including denied and failed attempts. Show the staff name and email when available, and display timestamps in Ghana time. For example, “Tom (tom@example.test) assigned guest (Smith) to Room 1.”
 
 Store events in an append-only `audit_events` table in Azure SQL Database. Each event includes a UTC timestamp, the user ID when known, property or platform scope, action, resource type and ID when applicable, outcome, and request correlation ID. For changes, include changed field names and approved before-and-after values. Exclude passwords, JWTs, refresh tokens, payment card details, and sensitive guest data from audit entries.
 

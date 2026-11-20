@@ -88,7 +88,7 @@ await using (var scope = app.Services.CreateAsyncScope())
     if (database.Database.IsSqlServer() && app.Configuration.GetValue<bool>("Database:Migrate"))
         await database.Database.MigrateAsync();
     else if (app.Environment.IsDevelopment() && database.Database.IsSqlite())
-        await database.Database.EnsureCreatedAsync();
+        await LocalDatabaseSetup.InitializeAsync(database);
 
     var email = builder.Configuration["Bootstrap:Email"];
     var password = builder.Configuration["Bootstrap:Password"];

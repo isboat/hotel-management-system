@@ -45,6 +45,7 @@ public sealed class ReservationsController(HotelDatabase database, TenantAccess 
 
     /// <summary>Allocates one unique inventory record for each night of the stay.</summary>
     [HttpPost("reservations")]
+    [AuditAction("assigned a room", "assign a room")]
     public async Task<IActionResult> Create(Guid hotelId, BookingInput input)
     {
         if (!await CanOperate(hotelId)) return Forbid();
@@ -66,10 +67,12 @@ public sealed class ReservationsController(HotelDatabase database, TenantAccess 
             await transaction.CommitAsync();
         }
         catch (DbUpdateException) { return Conflict("Room is unavailable for one or more selected nights."); }
+        AuditActionAttribute.Describe(HttpContext, $"assigned guest ({reservation.Guest}) to Room {room.Number}");
         return Ok(reservation);
     }
 
     [HttpPatch("reservations/{reservationId:guid}")]
+    [AuditAction("updated a reservation", "update a reservation")]
     public async Task<IActionResult> ChangeStatus(Guid hotelId, Guid reservationId, StatusInput input)
     {
         if (!await CanOperate(hotelId)) return Forbid();
@@ -107,6 +110,13 @@ public sealed class ReservationsController(HotelDatabase database, TenantAccess 
         }
         await database.SaveChangesAsync();
         await transaction.CommitAsync();
+        var action = input.Status switch
+        {
+            "CheckedIn" => $"checked guest ({stay.Guest}) in to Room {room!.Number}",
+            "CheckedOut" => $"checked guest ({stay.Guest}) out of Room {room!.Number}",
+            _ => $"cancelled the reservation for guest ({stay.Guest})"
+        };
+        AuditActionAttribute.Describe(HttpContext, action);
         return NoContent();
     }
 }

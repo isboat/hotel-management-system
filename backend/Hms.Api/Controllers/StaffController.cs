@@ -23,6 +23,7 @@ public sealed class StaffController(HotelDatabase database, TenantAccess access,
     };
 
     [HttpGet]
+    [AuditAction("viewed the staff directory", "view the staff directory")]
     public async Task<IActionResult> List(Guid hotelId)
     {
         if (!await access.Allows(User, hotelId, "Manager", "Administrator")) return Forbid();
@@ -35,6 +36,7 @@ public sealed class StaffController(HotelDatabase database, TenantAccess access,
 
     [HttpPost]
     [HttpPost("/api/v1/platform/properties/{hotelId:guid}/administrator")]
+    [AuditAction("added a staff member", "add a staff member")]
     public async Task<IActionResult> Add(Guid hotelId, StaffInput input)
     {
         if (input.Role == "Administrator")
@@ -65,6 +67,7 @@ public sealed class StaffController(HotelDatabase database, TenantAccess access,
 
     /// <summary>Updates an eligible membership and allows edits to locally managed names.</summary>
     [HttpPut("{staffId:guid}")]
+    [AuditAction("updated a staff member", "update a staff member")]
     public async Task<IActionResult> Edit(Guid hotelId, Guid staffId, StaffUpdateInput input)
     {
         await using var transaction = await database.Database.BeginTransactionAsync(IsolationLevel.Serializable);
@@ -85,6 +88,7 @@ public sealed class StaffController(HotelDatabase database, TenantAccess access,
     }
 
     [HttpPatch("{staffId:guid}/status")]
+    [AuditAction("changed a staff member’s access", "change a staff member’s access")]
     public async Task<IActionResult> Status(Guid hotelId, Guid staffId, StatusInput input)
     {
         var member = await database.Memberships.FindAsync(hotelId, staffId);
@@ -96,6 +100,7 @@ public sealed class StaffController(HotelDatabase database, TenantAccess access,
     }
 
     [HttpDelete("{staffId:guid}")]
+    [AuditAction("removed a staff member’s access", "remove a staff member’s access")]
     public async Task<IActionResult> Remove(Guid hotelId, Guid staffId)
     {
         var member = await database.Memberships.FindAsync(hotelId, staffId);
@@ -106,6 +111,7 @@ public sealed class StaffController(HotelDatabase database, TenantAccess access,
     }
 
     [HttpPost("{staffId:guid}/reset")]
+    [AuditAction("issued a password reset code", "issue a password reset code")]
     public async Task<IActionResult> RequestReset(Guid hotelId, Guid staffId)
     {
         var member = await database.Memberships.FindAsync(hotelId, staffId);
