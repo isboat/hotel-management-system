@@ -119,9 +119,20 @@ test('folio posts charges and cash payments only after confirmation', async ({ p
   await page.getByRole('button', { name: 'Reservations', exact: true }).click()
   await page.getByRole('button', { name: 'Folio' }).click()
   await page.getByLabel('Charge description').fill('Laundry')
-  await page.getByLabel('Charge amount (GHS)').fill('25')
-  await page.getByLabel('Amount applied (GHS)').fill('50')
-  await page.getByLabel('Cash tendered (GHS)').fill('60')
+  for (const [label, amount] of [
+    ['Charge amount (GHS)', '25.50'],
+    ['Amount applied (GHS)', '50.25'],
+    ['Cash tendered (GHS)', '60.00'],
+  ]) {
+    const input = page.getByLabel(label)
+    await input.pressSequentially('abc+-')
+    await expect(input).toHaveValue('')
+    await input.fill('12abc')
+    await expect(input).toHaveValue('')
+    await input.fill(amount)
+    await input.pressSequentially('e3')
+    await expect(input).toHaveValue(amount)
+  }
 
   for (const [label, title, detail, confirmLabel, endpoint] of [
     ['Post charge', 'Review charge', 'Laundry', 'Confirm charge', 'charges'],

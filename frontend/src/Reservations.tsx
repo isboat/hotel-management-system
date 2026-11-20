@@ -126,10 +126,10 @@ function GuestFolio({ api, path, stay, close, canRefund, property }: { api: Api;
         setReceipt(payment)
         reference.current = crypto.randomUUID()
       }}><div className="fields"><DescribedField label="Amount applied (GHS)" description="Enter how much of this payment should go toward the guest’s outstanding balance.">
-          <input name="amount" required inputMode="decimal" />
+          <FolioAmountInput name="amount" />
         </DescribedField>
         <DescribedField label="Cash tendered (GHS)" description="Enter the total cash the guest handed you, before giving any change.">
-          <input name="tendered" required inputMode="decimal" />
+          <FolioAmountInput name="tendered" />
         </DescribedField></div></ActionForm>}
       {!['Cancelled', 'CheckedOut'].includes(stay.status) && <ActionForm label="Post charge" action={async data => {
         const description = field(data, 'description').trim()
@@ -148,7 +148,7 @@ function GuestFolio({ api, path, stay, close, canRefund, property }: { api: Api;
           <input name="description" required />
         </DescribedField>
         <DescribedField label="Charge amount (GHS)" description="Enter the price of the item or service to add to the guest’s balance.">
-          <input name="charge" required inputMode="decimal" />
+          <FolioAmountInput name="charge" />
         </DescribedField></div></ActionForm>}
       {receipt && <div className="receipt"><h3>{receipt.amount < 0 ? 'Cash refund receipt' : 'Cash receipt'} · {property}</h3>
         <p>Receipt {receipt.id} · Folio {stay.id}</p><p>{new Date(receipt.utc).toLocaleString()} · Cashier {receipt.cashierId}</p>
@@ -168,4 +168,18 @@ function GuestFolio({ api, path, stay, close, canRefund, property }: { api: Api;
         <DescribedField label="Refund reason" description="Explain why the guest is receiving a refund."><input name="reason" required /></DescribedField></div></ActionForm>}
     </>}
   </section>
+}
+
+function FolioAmountInput({ name, id, 'aria-describedby': descriptionId }: {
+  name: string
+  id?: string
+  'aria-describedby'?: string
+}) {
+  const [value, setValue] = useState('')
+  return <input id={id} name={name} aria-describedby={descriptionId} value={value}
+    inputMode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" required
+    onChange={event => {
+      const next = event.currentTarget.value
+      if (/^\d*(?:\.\d{0,2})?$/.test(next)) setValue(next)
+    }} />
 }
