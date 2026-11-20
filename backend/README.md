@@ -76,7 +76,7 @@ dotnet test Hms.Tests
 dotnet publish Hms.Api -c Release
 ```
 
-The integration suite starts the API with a temporary SQLite database and tests HTTP authentication, tenant boundaries, concurrent room allocation, cash idempotency, refunds, reconciliation, audit records, and Swagger. SQL Server schema changes use EF Core migrations under `Hms.Api/Data/Migrations`. Validate the migration and concurrent booking and payment behavior on an Azure SQL staging database before production rollout.
+The integration suite starts the API with a temporary SQLite database and tests HTTP authentication, tenant boundaries, concurrent room allocation, cash idempotency, refunds, reconciliation, audit records, and Swagger. SQL Server schema changes use the [EF Core migration files](../sql/Migrations/). Validate the migration and concurrent booking and payment behavior on an Azure SQL staging database before production rollout.
 
 ## First deployment to Azure Web App
 
@@ -99,18 +99,15 @@ Run these commands from the repository root. Skip the tool installation if `dotn
 
 ```sh
 dotnet tool install --global dotnet-ef --version 10.0.12
+dotnet restore backend/Hms.Api
 dotnet ef database update --project backend/Hms.Api
 ```
 
 #### Alternative using SQL Server Management Studio (SSMS)
 
-You can apply the same migrations through SSMS. Connect to the Azure SQL **application database** with your schema deployment identity. Open the [idempotent Azure SQL migration script](sql/azure-migrations.sql), verify the database selected in the SSMS toolbar, and execute the entire script. It checks `__EFMigrationsHistory` and applies only migrations that EF Core has yet to record. Use either SSMS or `dotnet ef database update` for this step.
+You can apply the same migrations through SSMS. Connect to the Azure SQL **application database** with your schema deployment identity. Open the [idempotent Azure SQL migration script](../sql/azure-migrations.sql), verify the database selected in the SSMS toolbar, and execute the entire script. It checks `__EFMigrationsHistory` and applies only migrations that EF Core has yet to record. Use either SSMS or `dotnet ef database update` for this step.
 
-After adding a migration, regenerate the script from the repository root.
-
-```sh
-dotnet ef migrations script --idempotent --project backend/Hms.Api --output backend/sql/azure-migrations.sql
-```
+See the [SQL README](../sql/README.md) for migration history verification and instructions for regenerating the script.
 
 #### Grant the Web App database access
 
