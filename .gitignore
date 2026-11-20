@@ -424,3 +424,12 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# Local HMS databases and test/build outputs
+backend/**/*.db
+backend/**/*.db-shm
+backend/**/*.db-wal
+frontend/*.tsbuildinfo
+frontend/test-results/
+frontend/playwright-report/
+frontend/dist/
