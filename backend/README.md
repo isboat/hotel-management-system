@@ -82,48 +82,14 @@ The integration suite starts the API with a temporary SQLite database and tests 
 
 ### 1. Provision Azure resources
 
-1. Create an Azure SQL logical server and a database for the hotel management API. Configure a Microsoft Entra administrator on the SQL server so you can create database users for managed identities.
+1. Create an Azure SQL logical server. The application database is created through SSMS in the next step. Configure a Microsoft Entra administrator on the SQL server so you can create database users for managed identities.
 2. Create an Azure App Service Web App with **Code** publishing and the **.NET 10** runtime. Enable **HTTPS Only** in the Web App settings.
 3. In the Web App, open **Identity → System assigned**, turn the identity on, and save. This is the identity the API will use to connect to Azure SQL.
 4. Configure Azure SQL networking so both the Web App and the workstation or runner applying migrations can reach the server. For a private SQL endpoint, use App Service VNet integration and private DNS. For public SQL access, allow the required outbound IPs through the database server firewall.
 
-### 2. Apply the database migrations
+### 2. Set up the database in SSMS
 
-Use a deployment identity with permission to apply schema changes to the target database. On a workstation or runner with the .NET 10 SDK and access to Azure SQL, set `ConnectionStrings__Hotel` to that identity’s connection string without committing it. Include the target database and keep encryption enabled. For example, an interactive Entra connection uses the following format.
-
-```text
-Server=tcp:<sql-server>.database.windows.net,1433;Database=<database>;Authentication=Active Directory Interactive;User ID=<migration-account>;Encrypt=True;TrustServerCertificate=False;
-```
-
-Run these commands from the repository root. Skip the tool installation if `dotnet ef` 10.0.12 is already installed.
-
-```sh
-dotnet tool install --global dotnet-ef --version 10.0.12
-dotnet ef database update --project backend/Hms.Api
-```
-
-#### Alternative using SQL Server Management Studio (SSMS)
-
-You can apply the same migrations through SSMS. Connect to the Azure SQL **application database** with your schema deployment identity. Open the [idempotent Azure SQL migration script](sql/azure-migrations.sql), verify the database selected in the SSMS toolbar, and execute the entire script. It checks `__EFMigrationsHistory` and applies only migrations that EF Core has yet to record. Use either SSMS or `dotnet ef database update` for this step.
-
-After adding a migration, regenerate the script from the repository root.
-
-```sh
-dotnet ef migrations script --idempotent --project backend/Hms.Api --output backend/sql/azure-migrations.sql
-```
-
-#### Grant the Web App database access
-
-After the migration succeeds, connect to the **application database** as the SQL server’s Entra administrator. Create a user for the Web App’s system-assigned identity using its Entra display name, typically the Web App name. Replace the placeholder in the following commands.
-
-```sql
-CREATE USER [<web-app-identity-name>] FROM EXTERNAL PROVIDER;
-ALTER ROLE db_datareader ADD MEMBER [<web-app-identity-name>];
-ALTER ROLE db_datawriter ADD MEMBER [<web-app-identity-name>];
-DENY UPDATE, DELETE ON OBJECT::dbo.[Audit] TO [<web-app-identity-name>];
-```
-
-The Web App identity will be able to read and write application data and append audit records. Keep `Database__Migrate` unset in production and apply future migrations through the deployment identity before deploying the corresponding API version.
+Follow the [SQL setup guide](../sql/README.md) to create the database if needed, apply the idempotent schema script, and grant data access to the Web App’s managed identity. Run the scripts in order and verify the recorded migration history before deploying. Keep `Database__Migrate` unset on the Web App so schema updates are applied through SSMS.
 
 ### 3. Configure the API and first system administrator
 
