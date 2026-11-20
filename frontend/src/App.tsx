@@ -20,7 +20,7 @@ function Workspace({ session, onLogout }: { session: Session; onLogout: () => vo
   const { rows: hotels, error } = useRecords<Hotel>(api, session.isSystemAdmin ? null : '/auth/properties')
   const [hotelId, setHotelId] = useState('')
   const [page, setPage] = useState(session.isSystemAdmin ? 'Tenants' : 'Overview')
-  const [logoutError, setLogoutError] = useState('')
+  const [signingOut, setSigningOut] = useState(false)
   const hotel = hotels.find(row => row.id === hotelId) ?? hotels[0]
   const path = hotel ? `/properties/${hotel.id}` : ''
   const role = hotel?.role ?? ''
@@ -55,9 +55,11 @@ function Workspace({ session, onLogout }: { session: Session; onLogout: () => vo
     </aside>
     <div className="workspace">
       <header><span>{session.isSystemAdmin ? 'Platform administration' : hotel?.name}</span>
-        <div><span className="staff-name">{session.name}</span><button className="secondary" onClick={async () => {
-          try { await api('/auth/logout', 'POST'); onLogout() }
-          catch (failure) { setLogoutError((failure as Error).message) }
+        <div><span className="staff-name">{session.name}</span><button className="secondary" disabled={signingOut} onClick={async () => {
+          setSigningOut(true)
+          try { await api('/auth/logout', 'POST') }
+          catch { /* The local session is cleared even if server invalidation fails. */ }
+          finally { onLogout() }
         }}><LogOut size={16} /> Sign out</button></div></header>
       <main key={hotel?.id ?? 'platform'}
         onClickCapture={event => {
@@ -70,7 +72,7 @@ function Workspace({ session, onLogout }: { session: Session; onLogout: () => vo
           if (!(event.target instanceof HTMLInputElement) || event.target.type !== 'text') recordInteraction('Change')
         }}
         onSubmitCapture={() => recordInteraction('Submit')}>
-        <Notice text={error || logoutError || activityError} />
+        <Notice text={error || activityError} />
         {session.isSystemAdmin ? (page === 'Tenants' ? <Tenants api={api} /> : <AuditLog api={api} path="/platform" />)
           : !hotel ? <p className="empty">No active property available.</p>
           : page === 'Rooms' ? <Rooms api={api} path={path} role={role} />
@@ -90,20 +92,19 @@ function Overview({ api, path, property, frontDesk, navigate }: {
   api: Api; path: string; property: string; frontDesk: boolean; navigate: (page: string) => void
 }) {
   const rooms = useRecords<Room>(api, `${path}/rooms`)
-  const reservations = useRecords<Stay>(api, frontDesk ? `${path}/reservations` : null)
   const date = today()
-  const arrivals = reservations.rows.filter(stay => stay.arrival === date && stay.status === 'Confirmed')
-  const departures = reservations.rows.filter(stay => stay.departure === date && stay.status === 'CheckedIn')
+  const arrivals = useRecords<Stay>(api, frontDesk ? `${path}/reservations?status=Confirmed&arrival=${date}` : null)
+  const departures = useRecords<Stay>(api, frontDesk ? `${path}/reservations?status=CheckedIn&departure=${date}` : null)
   return <>
     <h1>Overview</h1><p className="subtitle">{property} · {new Intl.DateTimeFormat('en-GH', { dateStyle: 'long', timeZone: 'Africa/Accra' }).format(new Date())}</p>
-    <Notice text={rooms.error || reservations.error} />
+    <Notice text={rooms.error || arrivals.error || departures.error} />
     <div className="card-grid">
       <article className="panel metric"><BedDouble size={20} /><p>Rooms ready</p><strong>{rooms.rows.filter(room => !room.outOfService && room.status !== 'Dirty').length}</strong></article>
-      {frontDesk && <><article className="panel metric"><CalendarDays size={20} /><p>Arrivals today</p><strong>{arrivals.length}</strong></article>
-        <article className="panel metric"><CalendarDays size={20} /><p>Departures today</p><strong>{departures.length}</strong></article></>}
+      {frontDesk && <><article className="panel metric"><CalendarDays size={20} /><p>Arrivals today</p><strong>{arrivals.rows.length}</strong></article>
+        <article className="panel metric"><CalendarDays size={20} /><p>Departures today</p><strong>{departures.rows.length}</strong></article></>}
     </div>
     {frontDesk && <section className="panel"><div className="section-title"><h2>Expected arrivals</h2><button className="secondary" onClick={() => navigate('Reservations')}>View reservations</button></div>
-      {arrivals.length ? <ul className="arrivals">{arrivals.map(row => <li key={row.id}>{row.guest}</li>)}</ul> : <p>No pending arrivals today.</p>}
+      {arrivals.rows.length ? <ul className="arrivals">{arrivals.rows.map(row => <li key={row.id}>{row.guest}</li>)}</ul> : <p>No pending arrivals today.</p>}
     </section>}
   </>
 }

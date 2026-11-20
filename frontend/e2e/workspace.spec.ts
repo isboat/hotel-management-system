@@ -4,13 +4,15 @@ test('front desk signs in and can navigate to room inventory', async ({ page }) 
   await page.route('**/api/v1/**', async route => {
     const path = new URL(route.request().url()).pathname
     if (path.endsWith('/login')) {
-      await route.fulfill({ json: { token: 'test-session', name: 'Front desk', isSystemAdmin: false } })
+      await route.fulfill({ json: { token: 'test-session', refreshToken: 'test-refresh', name: 'Front desk', isSystemAdmin: false } })
     } else if (path === '/api/v1/auth/properties') {
       await route.fulfill({ json: [{ id: 'hotel', name: 'Accra Lodge', role: 'FrontDesk' }] })
     } else if (path.endsWith('/rooms')) {
       await route.fulfill({ json: [{ id: 'room', number: '101', type: 'Double', capacity: 2, rate: 35000, status: 'Clean' }] })
     } else if (path.endsWith('/reservations')) {
       await route.fulfill({ json: [] })
+    } else if (path.endsWith('/logout') || path.endsWith('/refresh')) {
+      await route.fulfill({ status: 401 })
     } else if (path.endsWith('/activity')) {
       await route.fulfill({ status: 204 })
     } else {
@@ -27,4 +29,8 @@ test('front desk signs in and can navigate to room inventory', async ({ page }) 
   await expect(page.getByRole('button', { name: 'Add room' })).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     await page.evaluate(() => window.innerWidth))
+  const refreshAttempt = page.waitForResponse(response => response.url().endsWith('/auth/refresh'))
+  await page.getByRole('button', { name: 'Sign out' }).click()
+  expect((await refreshAttempt).status()).toBe(401)
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()
 })

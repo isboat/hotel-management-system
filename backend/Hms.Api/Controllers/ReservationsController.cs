@@ -15,9 +15,23 @@ public sealed class ReservationsController(HotelDatabase database, TenantAccess 
     private Task<bool> CanOperate(Guid hotelId) => access.Allows(User, hotelId, "Manager", "FrontDesk", "Administrator");
 
     [HttpGet("reservations")]
-    public async Task<IActionResult> List(Guid hotelId) =>
-        await CanOperate(hotelId) ? Ok(await database.Reservations.Where(row => row.HotelId == hotelId)
-            .OrderByDescending(row => row.Arrival).Take(250).ToListAsync()) : Forbid();
+    public async Task<IActionResult> List(Guid hotelId, string? search, string? status, DateOnly? arrival,
+        DateOnly? departure, int offset = 0)
+    {
+        if (!await CanOperate(hotelId)) return Forbid();
+        if (offset < 0) return BadRequest("Offset must be non-negative.");
+        var stays = database.Reservations.Where(row => row.HotelId == hotelId);
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToUpperInvariant();
+            stays = stays.Where(row => row.Guest.ToUpper().Contains(term));
+        }
+        if (status is not null) stays = stays.Where(row => row.Status == status);
+        if (arrival.HasValue) stays = stays.Where(row => row.Arrival == arrival);
+        if (departure.HasValue) stays = stays.Where(row => row.Departure == departure);
+        return Ok(await stays.OrderByDescending(row => row.Arrival).ThenBy(row => row.Id)
+            .Skip(offset).Take(250).ToListAsync());
+    }
 
     [HttpGet("availability")]
     public async Task<IActionResult> Availability(Guid hotelId, DateOnly arrival, DateOnly departure)
@@ -84,7 +98,13 @@ public sealed class ReservationsController(HotelDatabase database, TenantAccess 
         if (input.Status == "Cancelled")
             await database.RoomNights.Where(row => row.HotelId == hotelId && row.ReservationId == reservationId).ExecuteDeleteAsync();
         if (input.Status == "CheckedOut")
+        {
+            // The checkout date is the first night another guest can book.
+            var checkoutDate = DateOnly.FromDateTime(DateTime.UtcNow);
+            await database.RoomNights.Where(row => row.HotelId == hotelId && row.ReservationId == reservationId &&
+                row.Date >= checkoutDate).ExecuteDeleteAsync();
             database.Entry(room!).CurrentValues.SetValues(room! with { Status = "Dirty" });
+        }
         await database.SaveChangesAsync();
         await transaction.CommitAsync();
         return NoContent();

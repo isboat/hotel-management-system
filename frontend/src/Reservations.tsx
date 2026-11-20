@@ -5,7 +5,6 @@ import { ActionForm, field, Notice, useRecords } from './components'
 import type { Folio, Guest, Receipt, Room, Stay } from './types'
 
 export function Reservations({ api, path, canRefund, property }: { api: Api; path: string; canRefund: boolean; property: string }) {
-  const { rows, error, reload } = useRecords<Stay>(api, `${path}/reservations`)
   const [availability, setAvailability] = useState<Room[]>([])
   const [arrival, setArrival] = useState(today)
   const [departure, setDeparture] = useState('')
@@ -13,6 +12,11 @@ export function Reservations({ api, path, canRefund, property }: { api: Api; pat
   const [selected, setSelected] = useState<Stay>()
   const [errorText, setErrorText] = useState('')
   const [search, setSearch] = useState('')
+  const [status, setStatus] = useState('')
+  const [offset, setOffset] = useState(0)
+  const query = new URLSearchParams({ offset: String(offset), search })
+  if (status) query.set('status', status)
+  const { rows, error, reload } = useRecords<Stay>(api, `${path}/reservations?${query}`)
   const [guestId, setGuestId] = useState('')
   const guests = useRecords<Guest>(api, booking ? `${path}/guests` : null)
 
@@ -34,9 +38,15 @@ export function Reservations({ api, path, canRefund, property }: { api: Api; pat
       </select></label></div></ActionForm>}
     </section>}
     {selected && <GuestFolio key={selected.id} api={api} path={path} stay={rows.find(row => row.id === selected.id) ?? selected} canRefund={canRefund} property={property} close={() => setSelected(undefined)} />}
-    <label className="search">Find a reservation<input value={search} onChange={event => setSearch(event.target.value)} placeholder="Guest name" /></label>
+    <div className="fields">
+      <label>Find a reservation<input value={search} onChange={event => { setSearch(event.target.value); setOffset(0) }} placeholder="Guest name" /></label>
+      <label>Reservation status<select value={status} onChange={event => { setStatus(event.target.value); setOffset(0) }}>
+        <option value="">All statuses</option><option value="Confirmed">Confirmed</option>
+        <option value="CheckedIn">Checked in</option><option value="CheckedOut">Checked out</option><option value="Cancelled">Cancelled</option>
+      </select></label>
+    </div>
     <div className="record-list">
-      {rows.filter(row => row.guest.toLowerCase().includes(search.toLowerCase())).map(row => <article className="panel record" key={row.id}>
+      {rows.map(row => <article className="panel record" key={row.id}>
         <div><h2>{row.guest}</h2><p>{row.arrival} to {row.departure}</p></div><span className="status">{row.status.replace(/([a-z])([A-Z])/g, '$1 $2')}</span>
         <div className="actions"><button className="secondary" onClick={() => setSelected(row)}>Folio</button>
           {(row.status === 'Confirmed' || row.status === 'CheckedIn') && <button onClick={async () => {
@@ -51,7 +61,12 @@ export function Reservations({ api, path, canRefund, property }: { api: Api; pat
           }}>Cancel booking</button>}
         </div></article>)}
     </div>
-    {!rows.length && <p className="empty">No reservations yet.</p>}
+    {!rows.length && <p className="empty">No matching reservations.</p>}
+    {(offset > 0 || rows.length === 250) && <nav aria-label="Reservation pages" className="actions">
+      <button className="secondary" disabled={offset === 0} onClick={() => setOffset(offset - 250)}>Previous</button>
+      <span>Page {offset / 250 + 1}</span>
+      <button className="secondary" disabled={rows.length < 250} onClick={() => setOffset(offset + 250)}>Next</button>
+    </nav>}
   </>
 }
 

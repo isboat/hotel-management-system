@@ -1,3 +1,5 @@
+using Hms.Api.Data;
+using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -65,6 +67,37 @@ public sealed class HotelApiTests
             await Read(await staff.PostAsJsonAsync($"{folio}/refunds", refund));
             var closed = await Read(await staff.PostAsJsonAsync($"{path}/cash-shifts/{shift.GetProperty("id").GetString()}/close", new { amount = 30000 }));
             Assert.Equal(30000, closed.GetProperty("expected").GetInt64());
+            // Seed an active stay hidden behind 250 later arrivals.
+            var hotelId = Guid.Parse(hotel);
+            var activeRoomId = Guid.NewGuid();
+            var activeStayId = Guid.NewGuid();
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var yesterday = today.AddDays(-1);
+            var tomorrow = today.AddDays(1);
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var database = scope.ServiceProvider.GetRequiredService<HotelDatabase>();
+                database.Rooms.Add(new Room(hotelId, activeRoomId, "102", "Double", 2, 0, "Clean"));
+                database.Reservations.Add(new Reservation(hotelId, activeStayId, activeRoomId, "Long Stay", yesterday, tomorrow, 0, "CheckedIn"));
+                database.Reservations.AddRange(Enumerable.Range(0, 250).Select(day =>
+                    new Reservation(hotelId, Guid.NewGuid(), activeRoomId, "Future Guest", tomorrow.AddDays(day), tomorrow.AddDays(day + 1), 0)));
+                database.RoomNights.AddRange(new RoomNight(hotelId, activeRoomId, yesterday, activeStayId),
+                    new RoomNight(hotelId, activeRoomId, today, activeStayId));
+                await database.SaveChangesAsync();
+            }
+            var firstPage = await Read(await staff.GetAsync($"{path}/reservations"));
+            Assert.Equal(250, firstPage.GetArrayLength());
+            Assert.DoesNotContain(firstPage.EnumerateArray(), row => row.GetProperty("id").GetGuid() == activeStayId);
+            var filtered = await Read(await staff.GetAsync($"{path}/reservations?status=CheckedIn&search=long%20stay"));
+            Assert.Equal(activeStayId, Assert.Single(filtered.EnumerateArray()).GetProperty("id").GetGuid());
+            var overview = await Read(await staff.GetAsync($"{path}/reservations?status=CheckedIn&departure={tomorrow:yyyy-MM-dd}"));
+            Assert.Equal(activeStayId, Assert.Single(overview.EnumerateArray()).GetProperty("id").GetGuid());
+            Assert.Equal(HttpStatusCode.NoContent, (await staff.PatchAsJsonAsync($"{path}/reservations/{activeStayId}", new { status = "CheckedOut" })).StatusCode);
+            var availability = await Read(await staff.GetAsync($"{path}/availability?arrival={today:yyyy-MM-dd}&departure={tomorrow:yyyy-MM-dd}"));
+            Assert.Contains(availability.EnumerateArray(), row => row.GetProperty("id").GetGuid() == activeRoomId);
+            var priorNight = await Read(await staff.GetAsync($"{path}/availability?arrival={yesterday:yyyy-MM-dd}&departure={today:yyyy-MM-dd}"));
+            Assert.DoesNotContain(priorNight.EnumerateArray(), row => row.GetProperty("id").GetGuid() == activeRoomId);
+            await Read(await staff.PostAsJsonAsync($"{path}/reservations", new { roomId = activeRoomId, guest = "Replacement Guest", arrival = today, departure = tomorrow }));
             var swagger = await Read(await staff.GetAsync("/swagger/v1/swagger.json"));
             Assert.Equal("Hotel Management API", swagger.GetProperty("info").GetProperty("title").GetString());
             var audit = await Read(await staff.GetAsync($"{path}/audit"));
