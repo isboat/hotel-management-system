@@ -4,9 +4,15 @@ ASP.NET Core Web API on .NET 10 and C#, with EF Core and Azure SQL Database. The
 
 ## Run locally
 
-Install the .NET 10 SDK. From `backend/`, set local-only bootstrap credentials and run the API.
+Install the .NET 10 SDK. Start at the repository root and run the commands for your shell in the same terminal. When prompted, enter a password of at least 12 characters and press Enter.
 
-```sh
+### Bash
+
+Use Bash with OpenSSL installed. On Windows, use Git Bash or WSL.
+
+```bash
+cd backend
+
 export ASPNETCORE_ENVIRONMENT=Development
 export Jwt__Key="$(openssl rand -hex 32)"
 export Bootstrap__Email="admin@example.test"
@@ -15,6 +21,25 @@ export Bootstrap__Password
 printf '\n'
 dotnet run --project Hms.Api --urls http://localhost:5080
 ```
+
+### PowerShell
+
+Use PowerShell 7.2 or newer.
+
+```powershell
+cd backend
+
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+$env:Jwt__Key = [Convert]::ToHexString(
+    [System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32)
+)
+$env:Bootstrap__Email = "admin@example.test"
+$env:Bootstrap__Password = Read-Host "Bootstrap password (at least 12 characters)" -MaskInput
+
+dotnet run --project Hms.Api --urls http://localhost:5080
+```
+
+### Verify and sign in
 
 Open `http://localhost:5080/swagger` for Swagger UI, `/swagger/v1/swagger.json` for OpenAPI, and `/health` to verify database connectivity. The default local database is SQLite. Set `ConnectionStrings__Local` to select a different local file. Bootstrap runs only if no system administrator exists. Sign in through the React app to create a property and assign its administrator, then sign in as that administrator to manage rooms and staff.
 
