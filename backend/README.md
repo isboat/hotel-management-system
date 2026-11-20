@@ -78,26 +78,56 @@ dotnet publish Hms.Api -c Release
 
 The integration suite starts the API with a temporary SQLite database and tests HTTP authentication, tenant boundaries, concurrent room allocation, cash idempotency, refunds, reconciliation, audit records, and Swagger. SQL Server schema changes use EF Core migrations under `Hms.Api/Data/Migrations`. Validate the migration and concurrent booking and payment behavior on an Azure SQL staging database before production rollout.
 
-## Azure Web App
+## First deployment to Azure Web App
 
-Provision a Web App with the .NET 10 runtime and an Azure SQL database. Configure HTTPS only and set these App Service settings.
+### 1. Provision Azure resources
+
+1. Create an Azure SQL logical server. The application database is created through SSMS in the next step. Configure a Microsoft Entra administrator on the SQL server so you can create database users for managed identities.
+2. Create an Azure App Service Web App with **Code** publishing and the **.NET 10** runtime. Enable **HTTPS Only** in the Web App settings.
+3. In the Web App, open **Identity → System assigned**, turn the identity on, and save. This is the identity the API will use to connect to Azure SQL.
+4. Configure Azure SQL networking so both the Web App and the workstation or runner applying migrations can reach the server. For a private SQL endpoint, use App Service VNet integration and private DNS. For public SQL access, allow the required outbound IPs through the database server firewall.
+
+### 2. Set up the database in SSMS
+
+Follow the [SQL setup guide](../sql/README.md) to create the database if needed, apply the idempotent schema script, and grant data access to the Web App’s managed identity. Run the scripts in order and verify the recorded migration history before deploying. Keep `Database__Migrate` unset on the Web App so schema updates are applied through SSMS.
+
+### 3. Configure the API and first system administrator
+
+In the Web App, open **Environment variables → App settings**. Add the following settings with the exact names shown, including the double underscores. Save the settings.
 
 | Setting | Value |
 | --- | --- |
-| `ConnectionStrings__Hotel` | Azure SQL connection string, preferably using the Web App managed identity |
-| `Jwt__Key` | Strong secret of at least 32 bytes, preferably a Key Vault reference |
-| `FrontendOrigins__0` | Exact HTTPS origin of the Static Web App, without a trailing slash |
-| `Bootstrap__Email`, `Bootstrap__Password` | First administrator credentials. Remove the bootstrap settings after provisioning. |
+| `ASPNETCORE_ENVIRONMENT` | `Production` |
+| `ConnectionStrings__Hotel` | `Server=tcp:<sql-server>.database.windows.net,1433;Database=<database>;Authentication=Active Directory Managed Identity;Encrypt=True;TrustServerCertificate=False;` |
+| `Jwt__Key` | A unique random signing secret of at least 32 bytes. Generate one with `openssl rand -hex 32` or a password manager. Store it in App Settings or use a Key Vault reference the Web App identity can read. |
+| `FrontendOrigins__0` | The exact HTTPS origin of the Azure Static Web App, such as `https://<frontend-host>.azurestaticapps.net`. Omit the trailing slash. |
+| `Bootstrap__Email` | The email address for the first **system administrator**. |
+| `Bootstrap__Password` | A unique password of at least 12 characters for that account. Enter it in App Settings or use a Key Vault reference. |
 
-Apply the EF migrations with a separate database identity before starting a deployment. The runtime identity needs data access to application tables, including insert/read permissions on the audit table. For a dedicated development or staging app whose identity can run migrations, set `Database__Migrate=true` to apply them on startup.
+The API creates the account on startup once it can connect to the migrated database and finds no existing system administrator. Use the production JWT signing secret consistently across restarts and instances. Keep the bootstrap password and signing key out of source control.
 
-```sh
-# Run with ConnectionStrings__Hotel set for the migration identity.
-dotnet tool install --global dotnet-ef --version 10.0.12
-dotnet ef database update --project Hms.Api
-```
+### 4. Connect GitHub Actions and deploy from main
 
-Set the `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, and `AZURE_WEBAPP_NAME` variables in the GitHub `backend-production` environment. Configure a matching Azure federated identity and grant it deployment access to the Web App. The backend build workflow tests and publishes the API artifact. The deployment workflow downloads the artifact from the successful `main` build and deploys it.
+1. In **Microsoft Entra ID → App registrations**, create an application for GitHub deployment. Add a **Federated credential** for GitHub Actions with the repository owner and name and the environment `backend-production`. For this repository the subject is `repo:isboat/hotel-management-system:environment:backend-production`. This deployment identity is separate from the Web App’s SQL identity.
+2. In the Web App’s **Access control (IAM)**, grant that application’s service principal **Website Contributor** scoped to the Web App.
+3. In the GitHub repository, open **Settings → Environments**, create `backend-production`, and set these environment variables.
+
+   | GitHub variable | Value |
+   | --- | --- |
+   | `AZURE_CLIENT_ID` | Deployment app registration’s application (client) ID |
+   | `AZURE_TENANT_ID` | Microsoft Entra directory (tenant) ID |
+   | `AZURE_SUBSCRIPTION_ID` | Subscription ID containing the Web App |
+   | `AZURE_WEBAPP_NAME` | Web App resource name without its hostname suffix |
+
+4. In **Actions → Backend build → Run workflow**, select `main` and start the workflow. A successful run publishes the API artifact and triggers **Backend deploy to Azure Web App**. Check both runs for success and complete any environment approval configured in GitHub.
+
+### 5. Verify the deployment and finish administrator setup
+
+1. Open `https://<api-host>/health`. Expect HTTP 200 with `{"status":"ok"}`. If startup fails or health returns 503, check **App Service → Log stream**, SQL networking, identity permissions, and whether migrations were applied to the configured database.
+2. Sign in to the deployed React application using the bootstrap email and password. The first system administrator should land on **Hotel tenants**. If the frontend is pending, open `https://<api-host>/swagger` over HTTPS and test `POST /api/v1/auth/login` directly. Expect HTTP 200 with a token and `isSystemAdmin: true`. Keep the returned tokens private.
+3. Once sign-in is verified, delete `Bootstrap__Email` and `Bootstrap__Password` from App Settings, save, and verify you can still sign in after the app restarts. The account remains in Azure SQL. Changing the bootstrap settings later does not reset an existing system administrator’s password.
+4. In **Hotel tenants**, create the first hotel and use **Assign administrator** to create its property administrator. Sign in as that property administrator to configure hotel details, add rooms, and invite staff.
+5. Verify the frontend build uses `VITE_API_URL=https://<api-host>`. If direct login works but browser sign-in fails, compare that URL and the frontend’s actual origin with `FrontendOrigins__0`. For a direct 401, check the bootstrap email, the 12-character minimum, and whether the database already has a system administrator. Use the existing credentials for a database that was previously bootstrapped.
 
 ## Implementation notes
 
