@@ -1,6 +1,11 @@
 export type Api = <T>(path: string, method?: string, data?: unknown) => Promise<T>
 
-export function createApi(token = '', refreshToken = ''): Api {
+type Tokens = { token: string; refreshToken: string }
+
+class SessionUnauthorized extends Error {}
+
+export function createApi(token = '', refreshToken = '', onRotate?: (tokens: Tokens) => void,
+  onExpired?: () => void): Api {
   let pendingRefresh: Promise<void> | undefined
   let tokenVersion = 0
   const origin = import.meta.env.VITE_API_URL || 'http://localhost:5080'
@@ -19,8 +24,13 @@ export function createApi(token = '', refreshToken = ''): Api {
     })
     if (response.status === 401 && retry && refreshToken) {
       if (tokenVersion === version) {
-        pendingRefresh ??= send<{ token: string; refreshToken: string }>('/auth/refresh', 'POST', { refreshToken }, false)
-          .then(value => { token = value.token; refreshToken = value.refreshToken; tokenVersion++ })
+        pendingRefresh ??= send<Tokens>('/auth/refresh', 'POST', { refreshToken }, false)
+          .then(value => {
+            token = value.token
+            refreshToken = value.refreshToken
+            tokenVersion++
+            onRotate?.(value)
+          })
           .finally(() => { pendingRefresh = undefined })
         await pendingRefresh
       }
@@ -28,14 +38,21 @@ export function createApi(token = '', refreshToken = ''): Api {
     }
     if (!response.ok) {
       const body = await response.text()
-      if (response.status === 401) throw new Error('Sign-in failed or your session expired.')
+      if (response.status === 401) throw new SessionUnauthorized('Sign-in failed or your session expired.')
       if (response.status === 403) throw new Error('You do not have access to this action.')
       if (body && !body.startsWith('{') && !body.startsWith('<')) throw new Error(body)
       throw new Error(`The request could not be completed (${response.status}).`)
     }
     return response.status === 204 ? undefined as T : response.json()
   }
-  return (path, method = 'GET', data) => send(path, method, data, true)
+  return async (path, method = 'GET', data) => {
+    try {
+      return await send(path, method, data, true)
+    } catch (error) {
+      if (error instanceof SessionUnauthorized) onExpired?.()
+      throw error
+    }
+  }
 }
 
 export const currency = (pesewas: number) =>

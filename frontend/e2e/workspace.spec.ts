@@ -4,7 +4,7 @@ test('front desk signs in and can navigate to room inventory', async ({ page }) 
   await page.route('**/api/v1/**', async route => {
     const path = new URL(route.request().url()).pathname
     if (path.endsWith('/login')) {
-      await route.fulfill({ json: { token: 'test-session', refreshToken: 'test-refresh', name: 'Front desk', isSystemAdmin: false } })
+      await route.fulfill({ json: { id: 'front-desk', token: 'test-session', refreshToken: 'test-refresh', name: 'Front desk', isSystemAdmin: false } })
     } else if (path === '/api/v1/auth/properties') {
       await route.fulfill({ json: [{ id: 'hotel', name: 'Accra Lodge', role: 'FrontDesk' }] })
     } else if (path.endsWith('/rooms')) {
@@ -29,9 +29,13 @@ test('front desk signs in and can navigate to room inventory', async ({ page }) 
   await expect(page.getByRole('button', { name: 'Add room' })).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     await page.evaluate(() => window.innerWidth))
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible()
   const refreshAttempt = page.waitForResponse(response => response.url().endsWith('/auth/refresh'))
   await page.getByRole('button', { name: 'Sign out' }).click()
   expect((await refreshAttempt).status()).toBe(401)
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()
+  await page.reload()
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()
 })
 
@@ -59,4 +63,30 @@ test('audit log shows the staff identity, action, and Ghana time', async ({ page
   await page.getByLabel('Filter activity').fill('Smith')
   await expect(page.getByText(/assigned guest \(Smith\) to Room 1/)).toBeVisible()
   await expect(page.getByText(/logged in/)).toHaveCount(0)
+})
+
+test('rotated credentials survive a second reload', async ({ page }) => {
+  let refreshCalls = 0
+  await page.route('**/api/v1/**', async route => {
+    const path = new URL(route.request().url()).pathname
+    if (path.endsWith('/login')) {
+      await route.fulfill({ json: { id: 'staff', token: 'expired', refreshToken: 'original', name: 'Tom', isSystemAdmin: true } })
+    } else if (path.endsWith('/refresh')) {
+      refreshCalls++
+      expect(route.request().postDataJSON()).toEqual({ refreshToken: 'original' })
+      await route.fulfill({ json: { token: 'active', refreshToken: 'rotated' } })
+    } else if (route.request().headers().authorization === 'Bearer active') {
+      await route.fulfill({ json: [{ id: 'hotel', name: 'Accra Lodge' }] })
+    } else {
+      await route.fulfill({ status: 401 })
+    }
+  })
+  await page.goto('/')
+  await page.getByLabel('Email address').fill('tom@example.test')
+  await page.getByLabel('Password', { exact: true }).fill('example-password')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Accra Lodge' })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Accra Lodge' })).toBeVisible()
+  expect(refreshCalls).toBe(1)
 })

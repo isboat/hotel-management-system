@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { BedDouble, Building2, CalendarDays, ChartNoAxesCombined, ClipboardList, LayoutDashboard, LogOut, Users, Wallet } from 'lucide-react'
 import { createApi, today } from './api'
 import type { Api } from './api'
@@ -8,15 +8,38 @@ import { Guests } from './Guests'
 import { Notice, SignIn, useRecords } from './components'
 import { Reservations } from './Reservations'
 import { Rooms } from './Rooms'
+import { readSession, saveSession } from './session'
 import type { Hotel, Room, Session, Stay } from './types'
 
 export default function App() {
-  const [session, setSession] = useState<Session>()
-  return session ? <Workspace session={session} onLogout={() => setSession(undefined)} /> : <SignIn onSession={setSession} />
+  const [session, setSession] = useState(readSession)
+  const activeSession = useRef(session)
+
+  const changeSession = useCallback((next?: Session) => {
+    activeSession.current = next
+    saveSession(next)
+    setSession(next)
+  }, [])
+
+  const rotateSession = useCallback((previous: Session, tokens: Pick<Session, 'token' | 'refreshToken'>) => {
+    if (activeSession.current === previous) saveSession({ ...previous, ...tokens })
+  }, [])
+
+  const endSession = useCallback((previous: Session) => {
+    if (activeSession.current === previous) changeSession()
+  }, [changeSession])
+
+  return session ? <Workspace session={session} onRotate={rotateSession} onLogout={endSession} />
+    : <SignIn onSession={changeSession} />
 }
 
-function Workspace({ session, onLogout }: { session: Session; onLogout: () => void }) {
-  const api = useMemo(() => createApi(session.token, session.refreshToken), [session.token, session.refreshToken])
+function Workspace({ session, onRotate, onLogout }: {
+  session: Session
+  onRotate: (session: Session, tokens: Pick<Session, 'token' | 'refreshToken'>) => void
+  onLogout: (session: Session) => void
+}) {
+  const api = useMemo(() => createApi(session.token, session.refreshToken, tokens => onRotate(session, tokens),
+    () => onLogout(session)), [session, onRotate, onLogout])
   const { rows: hotels, error } = useRecords<Hotel>(api, session.isSystemAdmin ? null : '/auth/properties')
   const [hotelId, setHotelId] = useState('')
   const [page, setPage] = useState(session.isSystemAdmin ? 'Tenants' : 'Overview')
@@ -49,7 +72,7 @@ function Workspace({ session, onLogout }: { session: Session; onLogout: () => vo
           setSigningOut(true)
           try { await api('/auth/logout', 'POST') }
           catch { /* The local session is cleared even if server invalidation fails. */ }
-          finally { onLogout() }
+          finally { onLogout(session) }
         }}><LogOut size={16} /> Sign out</button></div></header>
       <main key={hotel?.id ?? 'platform'}>
         <Notice text={error} />
