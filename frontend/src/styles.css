@@ -49,6 +49,8 @@ nav button[aria-current] { background: #2d6555; color: #fff; }
 .workspace { min-width: 0; }
 header { padding: .8rem clamp(1rem, 4vw, 2.5rem); display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: var(--paper); }
 header > div, .actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.folio-field { display: grid; grid-template-rows: auto 1fr auto; align-content: start; gap: .35rem; min-width: 0; }
+.field-help { font-size: .8rem; color: var(--muted); line-height: 1.4; }
 .staff-name { color: var(--muted); font-size: .87rem; }
 .workspace main { max-width: 85rem; padding: clamp(1rem, 4vw, 2.5rem); display: grid; gap: 1rem; }
 .subtitle { margin-top: -.5rem; }
