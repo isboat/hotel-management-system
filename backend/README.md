@@ -102,6 +102,18 @@ dotnet tool install --global dotnet-ef --version 10.0.12
 dotnet ef database update --project backend/Hms.Api
 ```
 
+#### Alternative using SQL Server Management Studio (SSMS)
+
+You can apply the same migrations through SSMS. Connect to the Azure SQL **application database** with your schema deployment identity. Open the [idempotent Azure SQL migration script](sql/azure-migrations.sql), verify the database selected in the SSMS toolbar, and execute the entire script. It checks `__EFMigrationsHistory` and applies only migrations that EF Core has yet to record. Use either SSMS or `dotnet ef database update` for this step.
+
+After adding a migration, regenerate the script from the repository root.
+
+```sh
+dotnet ef migrations script --idempotent --project backend/Hms.Api --output backend/sql/azure-migrations.sql
+```
+
+#### Grant the Web App database access
+
 After the migration succeeds, connect to the **application database** as the SQL server’s Entra administrator. Create a user for the Web App’s system-assigned identity using its Entra display name, typically the Web App name. Replace the placeholder in the following commands.
 
 ```sql
