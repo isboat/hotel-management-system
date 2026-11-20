@@ -39,6 +39,12 @@ $env:Bootstrap__Password = Read-Host "Bootstrap password (at least 12 characters
 dotnet run --project Hms.Api --urls http://localhost:5080
 ```
 
+For local development only, you can use this example in place of the generated JWT key. Generate a unique secret for deployed environments.
+
+```powershell
+$env:Jwt__Key = "4A8F2C1E9D7B3F5A6C2E1D8F4A9B7C3E2F1A6D8C5B4E9F2A7C3D1E8F4A9B5C6D"
+```
+
 ### Verify and sign in
 
 Open `http://localhost:5080/swagger` for Swagger UI, `/swagger/v1/swagger.json` for OpenAPI, and `/health` to verify database connectivity. The default local database is SQLite. Set `ConnectionStrings__Local` to select a different local file. Bootstrap runs only if no system administrator exists. Sign in through the React app to create a property and assign its administrator, then sign in as that administrator to manage rooms and staff.
