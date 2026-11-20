@@ -7,7 +7,7 @@ import type { FolioReview } from './FolioConfirmation'
 import type { Folio, Guest, Receipt, Room, Stay } from './types'
 
 export function Reservations({ api, path, canRefund, property }: { api: Api; path: string; canRefund: boolean; property: string }) {
-  const [availability, setAvailability] = useState<Room[]>([])
+  const [availability, setAvailability] = useState<Room[]>()
   const [arrival, setArrival] = useState(today)
   const [departure, setDeparture] = useState('')
   const [booking, setBooking] = useState(false)
@@ -23,16 +23,20 @@ export function Reservations({ api, path, canRefund, property }: { api: Api; pat
   const guests = useRecords<Guest>(api, booking ? `${path}/guests` : null)
 
   return <>
-    <div className="section-title"><div><h1>Reservations</h1><p>Arrivals, departures and guest folios</p></div><button onClick={() => setBooking(value => !value)}>New reservation</button></div>
+    <div className="section-title"><div><h1>Reservations</h1><p>Arrivals, departures and guest folios</p></div><button onClick={() => { setAvailability(undefined); setBooking(value => !value) }}>New reservation</button></div>
     <Notice text={error || errorText} />
     {booking && <section className="panel"><h2>Find availability</h2>
-      <ActionForm label="Find rooms" action={async () => setAvailability(await api<Room[]>(`${path}/availability?arrival=${arrival}&departure=${departure}`))}>
-        <div className="fields"><label>Arrival<input type="date" required value={arrival} onChange={event => { setArrival(event.target.value); setAvailability([]) }} /></label>
-          <DescribedField label="Departure" description="Choose the checkout date. The final booked night is the night before."><input type="date" required value={departure} onChange={event => { setDeparture(event.target.value); setAvailability([]) }} /></DescribedField></div>
+      <ActionForm label="Find rooms" action={async () => {
+        setAvailability(undefined)
+        setAvailability(await api<Room[]>(`${path}/availability?arrival=${arrival}&departure=${departure}`))
+      }}>
+        <div className="fields"><label>Arrival<input type="date" required value={arrival} onChange={event => { setArrival(event.target.value); setAvailability(undefined) }} /></label>
+          <DescribedField label="Departure" description="Choose the checkout date. The final booked night is the night before."><input type="date" required value={departure} onChange={event => { setDeparture(event.target.value); setAvailability(undefined) }} /></DescribedField></div>
       </ActionForm>
-      {!!availability.length && <ActionForm label="Confirm reservation" action={async data => {
+      {availability?.length === 0 && <p className="empty" role="status">No rooms are available for the selected dates. Try a different arrival or departure date.</p>}
+      {!!availability?.length && <ActionForm label="Confirm reservation" action={async data => {
         await api(`${path}/reservations`, 'POST', { guest: guests.rows.find(guest => guest.id === guestId)?.name ?? field(data, 'guest'), guestId: guestId || null, roomId: field(data, 'room'), arrival, departure })
-        reload(); setAvailability([]); setBooking(false)
+        reload(); setAvailability(undefined); setBooking(false)
       }}><div className="fields"><DescribedField label="Guest profile" description="Select an existing guest to link the reservation to their stay history, or enter a guest name for this booking."><select value={guestId} onChange={event => setGuestId(event.target.value)}>
         <option value="">Enter a guest name</option>{guests.rows.map(guest => <option key={guest.id} value={guest.id}>{guest.name}</option>)}
       </select></DescribedField>{!guestId && <label>Guest name<input name="guest" required /></label>}<label>Available room<select name="room">
