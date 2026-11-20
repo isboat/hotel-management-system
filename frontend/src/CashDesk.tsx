@@ -1,0 +1,24 @@
+import { currency, toPesewas } from './api'
+import type { Api } from './api'
+import { ActionForm, field, Notice, useRecords } from './components'
+
+type Shift = { id: string; cashierId: string; openedUtc: string; float: number; closedUtc?: string; counted?: number; expected?: number }
+
+export function CashDesk({ api, path, staffId }: { api: Api; path: string; staffId: string }) {
+  const endpoint = `${path}/cash-shifts`
+  const { rows, error, reload } = useRecords<Shift>(api, endpoint)
+  const ownShift = rows.find(shift => shift.cashierId === staffId && !shift.closedUtc)
+  return <><h1>Cash desk</h1><Notice text={error} />
+    {!ownShift && <section className="panel"><h2>Open a cash shift</h2>
+      <ActionForm label="Open shift" action={async data => {
+        await api(endpoint, 'POST', { amount: toPesewas(field(data, 'amount')) }); reload()
+      }}><label>Opening float (GHS)<input name="amount" inputMode="decimal" required /></label></ActionForm></section>}
+    <div className="record-list">{rows.map(shift => <article className="panel" key={shift.id}>
+      <div className="section-title"><h2>{new Date(shift.openedUtc).toLocaleString()}</h2><span className="status">{shift.closedUtc ? 'Closed' : 'Open'}</span></div>
+      <p>Cashier {shift.cashierId} · Opening float {currency(shift.float)}</p>
+      {shift.closedUtc ? <p>Counted {currency(shift.counted ?? 0)} · Expected {currency(shift.expected ?? 0)} · Variance {currency((shift.counted ?? 0) - (shift.expected ?? 0))}</p> :
+        <ActionForm label="Close shift" action={async data => {
+          await api(`${endpoint}/${shift.id}/close`, 'POST', { amount: toPesewas(field(data, 'amount')) }); reload()
+        }}><label>Cash counted (GHS)<input name="amount" inputMode="decimal" required /></label></ActionForm>}
+    </article>)}</div></>
+}
