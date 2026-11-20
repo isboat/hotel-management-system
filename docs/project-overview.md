@@ -7,8 +7,10 @@ This project is designed for small and medium-sized hotels and guest houses in G
 ## Key features
 
 - **Front desk and reservations management.** Record bookings, maintain guest profiles, assign rooms, and handle check-ins and check-outs. A shared, up-to-date availability calendar helps staff spot conflicting reservations and prevent double-booking.
+- **Room management.** Managers maintain room inventory, room types, and closures for their property.
+- **User management.** Managers create, edit, deactivate, remove, and initiate password resets for eligible staff at their property.
 - **Housekeeping.** Track whether each room is dirty, clean, or inspected. When housekeeping updates a room's status, front desk staff can see which rooms are ready for arriving guests. A vacant room can still be awaiting cleaning.
-- **Billing and point of sale (POS).** Maintain guest folios, which are itemised records of charges and payments, and generate invoices. Staff can post charges from services such as restaurants, spas, or room service to a guest's folio.
+- **Billing and point of sale (POS).** Maintain guest folios, which are itemised records of charges and cash payments, and generate invoices and cash receipts. Staff can post charges from services such as restaurants, spas, or room service to a guest's folio.
 - **Channel manager.** Automatically synchronise room availability and rates with connected online travel agencies (OTAs) and booking platforms such as Booking.com, Expedia, and Airbnb. When a reservation is recorded, the channel manager updates inventory across connected channels to reduce the risk of overbooking.
 - **Reporting and analytics.** Generate financial reports and track room performance. Occupancy is rooms sold divided by rooms available, expressed as a percentage. Average daily rate (ADR) is room revenue divided by rooms sold. Revenue per available room (RevPAR) is room revenue divided by rooms available. Use figures from the same reporting period when comparing these metrics.
 - **Guest relationship management (CRM) and marketing.** Keep guest contact details, preferences, and stay history so staff can personalise service and support loyalty programmes or marketing campaigns. Record marketing preferences so staff can respect guests' communication choices.
@@ -19,11 +21,26 @@ This project is designed for small and medium-sized hotels and guest houses in G
 
 | Role | Responsibilities |
 | --- | --- |
-| Front desk agents and receptionists | Check guests in and out, assign rooms, handle walk-in reservations, process payments, and issue room keys. |
+| Front desk agents and receptionists | Check guests in and out, assign rooms, handle walk-in reservations, collect cash, issue receipts, and issue room keys. |
 | Housekeeping staff and supervisors | Update room status and report maintenance issues. Staff mark rooms clean after servicing them, and supervisors mark rooms inspected after checking them. |
-| Hotel managers and general managers (GMs) | Perform all front desk duties and create front desk agent and receptionist accounts for their property. Oversee daily operations, adjust room pricing, monitor staff performance, and review financial and occupancy reports. |
+| Hotel managers and general managers (GMs) | Perform all front desk duties and manage rooms and eligible staff accounts at their property. Oversee daily operations, adjust room pricing, monitor staff performance, and review financial and occupancy reports. |
 | Administrators | Configure assigned properties and manage staff access within those properties, including manager and housekeeping accounts. |
 | System administrators | Manage platform-wide configuration, deployments, monitoring, backups, and recovery. Access to hotel operational records requires a separate property role. |
+
+## Manager workflows
+
+### Room management
+
+- Add and edit rooms with a property-unique room number, room type, floor, capacity, amenities, and default rate. Filter inventory by room type, readiness, and availability.
+- Schedule out-of-service periods for maintenance and return rooms to service when work is complete. Reflect closures in availability and channel updates. Require staff to resolve overlapping bookings before confirming a closure.
+- Delete rooms that have never been used and have no dependent records. Archive rooms with booking or operational history so they disappear from new booking searches while remaining visible in historical reports. Require active stays and future bookings to be resolved before deletion or archival.
+- Enforce booking and inventory changes together on the server so a room cannot be booked concurrently with a conflicting closure or removal. Audit room creation, updates, closures, and removals.
+
+### User management
+
+- List and filter staff by role and account status. Invite staff, edit their profile and eligible role, suspend or reactivate property access, and remove users from the property. Managers and GMs can manage front desk and housekeeping users at their assigned property. Property administrators manage manager accounts and supervisor appointments.
+- Preserve user identifiers referenced by bookings, payments, and audit records when access is removed. Remove the property membership and invalidate existing access for that property. Keep memberships at other properties intact.
+- Initiate a password reset by sending a short-lived, single-use link to the user's verified contact channel, or submit a reset request to a property administrator when staff cannot use that channel. The user sets their own password and the system revokes existing sessions after a successful reset. Record reset requests and outcomes in the audit log.
 
 ## Proposed web application design
 
@@ -54,16 +71,22 @@ Organise the backend into modules for authentication, properties and staff, rese
 | `GET /api/v1/properties/{propertyId}/availability` | Find available rooms for a date range. |
 | `POST /api/v1/properties/{propertyId}/reservations` | Create a reservation and allocate rooms in a single transaction. |
 | `PATCH /api/v1/properties/{propertyId}/rooms/{roomId}/housekeeping` | Change a room's cleaning status and record who changed it. |
-| `POST /api/v1/properties/{propertyId}/folios/{folioId}/payments` | Record a payment using an idempotency key to prevent duplicate entries when a request is retried. |
+| `POST /api/v1/properties/{propertyId}/folios/{folioId}/payments` | Record a cash payment using an idempotency key so a retry returns the original receipt. |
 | `GET /api/v1/properties/{propertyId}/reports/occupancy` | Return occupancy, ADR, and RevPAR for the selected period. |
 
 Process OTA updates in background jobs after the reservation transaction commits. Record external reservation identifiers to deduplicate inbound events and surface repeated synchronisation failures to staff.
+
+### Cash payments
+
+The HMS supports cash as the sole payment method. Staff receive physical cash in Ghanaian cedis (GHS) and enter the amount to apply to the folio and the amount tendered. The system calculates change, records only the amount applied as the payment, and updates the outstanding balance. Staff can record partial payments and print or reprint a numbered receipt. A receipt includes the property, folio reference, cashier, date, amount applied, amount tendered, change, and remaining balance.
+
+Save the payment, receipt reference, and audit event in one transaction. An authorised manager records any cash refund or payment correction as a separate entry linked to the original payment, with a reason. At shift close, staff record the cash counted. Managers reconcile the count against the opening float plus cash payments minus cash refunds and review any variance.
 
 ### SQL data model
 
 - **Properties and staff.** `properties`, `users`, and `property_memberships` associate staff accounts with their assigned properties and roles. Store system administrator assignments separately from property memberships.
 - **Rooms, guests, and stays.** `room_types`, `rooms`, `guests`, `reservations`, and `room_allocations` capture room inventory, contact details, stay dates, and room assignments. Store one row per active booked night in `room_nights`, with a unique constraint on `(property_id, room_id, stay_date)`. Write the reservation, allocations, and room nights in one transaction. Roll back on a uniqueness conflict and return HTTP 409. Release room nights in the same transaction as a cancellation or reassignment. Include arrival and exclude departure when generating room nights so another guest can arrive on the departure date.
-- **Operations and billing.** `housekeeping_events`, `folios`, `folio_items`, and `payments` record changes and financial activity. Store monetary amounts as integer pesewas with a currency code. Use GHS and the `Africa/Accra` time zone for local business dates and reports.
+- **Operations and billing.** `housekeeping_events`, `folios`, `folio_items`, `payments`, and `cash_shifts` record room status changes, charges, cash receipts, refunds, and shift reconciliation. Link cash entries to the folio, cashier, and shift, and enforce receipt number uniqueness per property. Store monetary amounts as integer pesewas with a currency code. Use GHS and the `Africa/Accra` time zone for local business dates and reports.
 - **Channel integrations.** `channel_connections`, `channel_reservations`, and `integration_jobs` track external channels, their reservation references, and synchronisation attempts.
 
 Use foreign keys that preserve property boundaries, indexes for property-scoped date and status queries, and versioned migrations. Test backup restoration as part of deployment readiness.
@@ -72,7 +95,7 @@ Use foreign keys that preserve property boundaries, indexes for property-scoped 
 
 Staff sign in with a password verified against an Argon2id hash. The API issues a signed, short-lived JWT access token and a rotating refresh token. The frontend keeps the access token in memory and sends it in the `Authorization: Bearer` header. The refresh token is stored in a Secure, HttpOnly, SameSite cookie, with server-side session state for rotation, revocation, and reuse detection. Check the request origin on cookie-backed refresh and logout endpoints. Logout revokes the refresh session and clears the cookie.
 
-ASP.NET Core JWT bearer authentication validates the token signature, expected algorithm, issuer, audience, and expiry on every protected request. Authorisation policies check the user's current property membership and role for hotel operations, and a separate system administrator role for platform operations. The account creation policy allows managers to assign the front desk role at their own property. Record role changes and account creation in the audit log. An access token contains a user identifier and session claims. Guest details and other personal data stay in the database.
+ASP.NET Core JWT bearer authentication validates the token signature, expected algorithm, issuer, audience, and expiry on every protected request. Authorisation policies check the user's active session, current property membership, and role for hotel operations, and a separate system administrator role for platform operations. Staff management policies check both the caller's authority and the target user's role and property before allowing account or reset actions. Record staff management actions in the audit log. An access token contains a user identifier and session claims. Guest details and other personal data stay in the database.
 
 ### User activity audit log
 
@@ -84,9 +107,11 @@ Write audit events for successful data changes in the same transaction as the ch
 
 ### Verification
 
+Verify that room closures and removals cannot conflict with bookings and that archived rooms remain visible in historical reports. Verify that managers can manage eligible staff only at their own property, that removing membership blocks the user's existing access to that property, and that password reset links expire, work once, and revoke prior sessions on completion.
+
 Verify that successful, failed, and denied actions generate accurate audit events, including reads and exports. Test that a rolled-back change leaves a failed-attempt event, unauthorised users cannot access audit records, and audit entries exclude sensitive values.
 
-Test booking, room status updates, and folio review at phone, tablet, and laptop widths. Run API integration tests against a dedicated Azure SQL test database to verify that concurrent bookings cannot allocate the same room for the same night, retried payments produce one entry, and staff cannot access records at another property. Exercise expired JWTs, refresh token rotation, and logout.
+Test booking, room status updates, and folio review at phone, tablet, and laptop widths. Run API integration tests against a dedicated Azure SQL test database to verify that concurrent bookings cannot allocate the same room for the same night, retried cash payments produce one payment and one receipt, and staff cannot access records at another property. Verify partial cash payments, change calculation, refunds, and shift reconciliation. Exercise expired JWTs, refresh token rotation, and logout.
 
 ## Further reading
 
