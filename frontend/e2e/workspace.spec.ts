@@ -205,8 +205,10 @@ test('maintenance keeps fixed issues in history with their fix date', async ({ p
   await expect(issueCard.getByRole('button', { name: 'Mark fixed' })).toHaveCount(0)
 })
 
-test('staff review the reservation before it is created', async ({ page }) => {
+test('staff confirm reservation creation and cancellation in the overlay', async ({ page }) => {
   const bookings: unknown[] = []
+  const cancellations: unknown[] = []
+  let status = 'Confirmed'
   await page.route('**/api/v1/**', async route => {
     const request = route.request()
     const path = new URL(request.url()).pathname
@@ -219,6 +221,12 @@ test('staff review the reservation before it is created', async ({ page }) => {
     } else if (path.endsWith('/reservations') && request.method() === 'POST') {
       bookings.push(request.postDataJSON())
       await route.fulfill({ json: { id: 'reservation' } })
+    } else if (path.endsWith('/reservations/reservation') && request.method() === 'PATCH') {
+      cancellations.push(request.postDataJSON())
+      status = 'Cancelled'
+      await route.fulfill({ status: 204 })
+    } else if (path.endsWith('/reservations')) {
+      await route.fulfill({ json: bookings.length ? [{ id: 'reservation', guest: 'Smith', arrival: '2026-12-01', departure: '2026-12-03', status }] : [] })
     } else {
       await route.fulfill({ json: [] })
     }
@@ -247,4 +255,18 @@ test('staff review the reservation before it is created', async ({ page }) => {
   await dialog.getByRole('button', { name: 'Confirm reservation', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Find availability' })).toHaveCount(0)
   expect(bookings).toEqual([{ guest: 'Smith', guestId: null, roomId: 'room', arrival: '2026-12-01', departure: '2026-12-03' }])
+
+  const cancelBooking = page.getByRole('button', { name: 'Cancel booking', exact: true })
+  const cancelDialog = page.getByRole('dialog', { name: 'Cancel booking?' })
+  await cancelBooking.click()
+  await expect(cancelDialog.getByText('Smith')).toBeVisible()
+  await expect(cancelDialog.getByText('2026-12-01')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(cancelDialog).toHaveCount(0)
+  expect(cancellations).toHaveLength(0)
+
+  await cancelBooking.click()
+  await cancelDialog.getByRole('button', { name: 'Yes, cancel booking' }).click()
+  await expect(page.getByRole('article').getByText('Cancelled', { exact: true })).toBeVisible()
+  expect(cancellations).toEqual([{ status: 'Cancelled' }])
 })

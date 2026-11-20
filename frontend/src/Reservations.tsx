@@ -87,7 +87,14 @@ export function Reservations({ api, path, canRefund, property }: { api: Api; pat
             catch (failure) { setErrorText((failure as Error).message) }
           }}>{row.status === 'Confirmed' ? 'Check in' : 'Check out'}</button>}
           {row.status === 'Confirmed' && <button className="secondary danger" onClick={async () => {
-            if (!confirm('Cancel this reservation?')) return
+            if (!await requestConfirmation({
+              title: 'Cancel booking?', subtitle: row.guest, confirmLabel: 'Yes, cancel booking',
+              details: [
+                { label: 'Arrival', value: row.arrival },
+                { label: 'Departure', value: row.departure },
+              ],
+            })) return
+            setErrorText('')
             try { await api(`${path}/reservations/${row.id}`, 'PATCH', { status: 'Cancelled' }); reload() }
             catch (failure) { setErrorText((failure as Error).message) }
           }}>Cancel booking</button>}
