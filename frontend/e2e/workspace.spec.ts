@@ -161,3 +161,46 @@ test('folio posts charges and cash payments only after confirmation', async ({ p
     expect(posts.slice(priorPosts)).toEqual([endpoint])
   }
 })
+
+test('maintenance keeps fixed issues in history with their fix date', async ({ page }) => {
+  const issue = { id: 'issue', roomNumber: '101', description: 'Bathroom leak', resolved: false,
+    reportedUtc: '2026-12-02T11:20:00Z', fixedUtc: null as string | null }
+  let reported = false
+  await page.route('**/api/v1/**', async route => {
+    const request = route.request()
+    const path = new URL(request.url()).pathname
+    if (path.endsWith('/login')) {
+      await route.fulfill({ json: { id: 'staff', token: 'session', refreshToken: 'refresh', name: 'Tom', isSystemAdmin: false } })
+    } else if (path.endsWith('/auth/properties')) {
+      await route.fulfill({ json: [{ id: 'hotel', name: 'Accra Lodge', role: 'Housekeeping' }] })
+    } else if (path.endsWith('/rooms')) {
+      await route.fulfill({ json: [{ id: 'room', number: '101', type: 'Double', capacity: 2, rate: 35000, status: 'Clean' }] })
+    } else if (path.endsWith('/maintenance') && request.method() === 'POST') {
+      expect(request.postDataJSON()).toEqual({ roomId: 'room', description: 'Bathroom leak' })
+      reported = true
+      await route.fulfill({ json: issue })
+    } else if (path.endsWith('/maintenance/issue/resolve')) {
+      issue.resolved = true
+      issue.fixedUtc = '2026-12-02T12:30:00Z'
+      await route.fulfill({ status: 204 })
+    } else if (path.endsWith('/maintenance')) {
+      await route.fulfill({ json: reported ? [issue] : [] })
+    } else {
+      await route.fulfill({ status: 404 })
+    }
+  })
+  await page.goto('/')
+  await page.getByLabel('Email address').fill('tom@example.test')
+  await page.getByLabel('Password', { exact: true }).fill('example-password')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await page.getByRole('button', { name: 'Rooms', exact: true }).click()
+  await page.getByRole('button', { name: 'Maintenance', exact: true }).click()
+  await page.getByLabel('Issue', { exact: true }).fill('Bathroom leak')
+  await page.getByRole('button', { name: 'Report issue' }).click()
+  const issueCard = page.getByRole('article').filter({ hasText: 'Bathroom leak' })
+  await expect(issueCard.getByText('Open', { exact: true })).toBeVisible()
+  await issueCard.getByRole('button', { name: 'Mark fixed' }).click()
+  await page.getByLabel('Issue status').selectOption('fixed')
+  await expect(issueCard.locator('time[datetime="2026-12-02T12:30:00Z"]')).toBeVisible()
+  await expect(issueCard.getByRole('button', { name: 'Mark fixed' })).toHaveCount(0)
+})

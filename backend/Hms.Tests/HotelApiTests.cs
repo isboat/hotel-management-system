@@ -72,6 +72,22 @@ public sealed class HotelApiTests
                 new { number = "101", type = "Double", capacity = 2, rate = 35000, description = "Garden view and balcony" })).StatusCode);
             var rooms = await Read(await staff.GetAsync($"{path}/rooms"));
             Assert.Equal("Garden view and balcony", Assert.Single(rooms.EnumerateArray()).GetProperty("description").GetString());
+            var issue = await Read(await staff.PostAsJsonAsync($"{path}/maintenance", new { roomId, description = "Bathroom leak" }));
+            var issueId = issue.GetProperty("id").GetGuid();
+            Assert.False(issue.GetProperty("resolved").GetBoolean());
+            Assert.NotEqual(JsonValueKind.Null, issue.GetProperty("reportedUtc").ValueKind);
+            Assert.Equal(HttpStatusCode.Forbidden, (await staff.PatchAsync($"/api/v1/properties/{other}/maintenance/{issueId}/resolve", null)).StatusCode);
+            var resolveIssue = $"{path}/maintenance/{issueId}/resolve";
+            Assert.Equal(HttpStatusCode.NoContent, (await staff.PatchAsync(resolveIssue, null)).StatusCode);
+            var history = await Read(await staff.GetAsync($"{path}/maintenance"));
+            var fixedIssue = Assert.Single(history.EnumerateArray());
+            Assert.True(fixedIssue.GetProperty("resolved").GetBoolean());
+            Assert.Equal("101", fixedIssue.GetProperty("roomNumber").GetString());
+            var fixedUtc = fixedIssue.GetProperty("fixedUtc").GetDateTime();
+            Assert.True(fixedUtc >= issue.GetProperty("reportedUtc").GetDateTime());
+            Assert.Equal(HttpStatusCode.NoContent, (await staff.PatchAsync(resolveIssue, null)).StatusCode);
+            history = await Read(await staff.GetAsync($"{path}/maintenance"));
+            Assert.Equal(fixedUtc, Assert.Single(history.EnumerateArray()).GetProperty("fixedUtc").GetDateTime());
             var booking = new { roomId, guest = "Test guest", arrival = "2026-12-03", departure = "2026-12-04" };
             var results = await Task.WhenAll(
                 staff.PostAsJsonAsync($"{path}/reservations", booking),

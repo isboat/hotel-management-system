@@ -88,22 +88,48 @@ public sealed class RoomsController(HotelDatabase database, TenantAccess access)
         return updated == 0 ? NotFound() : NoContent();
     }
 
+    private Task<bool> CanManageMaintenance(Guid hotelId) =>
+        access.Allows(User, hotelId, "Housekeeping", "Supervisor", "Manager", "Administrator");
+
     [HttpGet("maintenance")]
-    public async Task<IActionResult> Maintenance(Guid hotelId) =>
-        await access.Allows(User, hotelId, "Housekeeping", "Supervisor", "Manager", "Administrator")
-            ? Ok(await database.Maintenance.Where(row => row.HotelId == hotelId && !row.Resolved).ToListAsync())
-            : Forbid();
+    public async Task<IActionResult> Maintenance(Guid hotelId)
+    {
+        if (!await CanManageMaintenance(hotelId)) return Forbid();
+        var history = from issue in database.Maintenance
+                      where issue.HotelId == hotelId
+                      join room in database.Rooms on new { issue.HotelId, Id = issue.RoomId } equals new { room.HotelId, room.Id }
+                      orderby issue.Resolved, issue.ReportedUtc descending, issue.Id
+                      select new
+                      {
+                          issue.Id, issue.HotelId, issue.RoomId, RoomNumber = room.Number, issue.Description,
+                          issue.Resolved, issue.ReportedUtc, issue.FixedUtc
+                      };
+        return Ok(await history.ToListAsync());
+    }
 
     [HttpPost("maintenance")]
     [AuditAction("reported a maintenance issue", "report a maintenance issue")]
     public async Task<IActionResult> ReportIssue(Guid hotelId, MaintenanceInput input)
     {
-        if (!await access.Allows(User, hotelId, "Housekeeping", "Supervisor", "Manager", "Administrator")) return Forbid();
+        if (!await CanManageMaintenance(hotelId)) return Forbid();
         if (!await database.Rooms.AnyAsync(row => row.HotelId == hotelId && row.Id == input.RoomId && !row.Archived)) return NotFound();
-        var issue = new MaintenanceIssue(hotelId, Guid.NewGuid(), input.RoomId, input.Description.Trim());
+        var issue = new MaintenanceIssue(hotelId, Guid.NewGuid(), input.RoomId, input.Description.Trim(), ReportedUtc: DateTime.UtcNow);
         database.Maintenance.Add(issue);
         await database.SaveChangesAsync();
         return Ok(issue);
+    }
+
+    /// <summary>Marks an issue fixed once, preserving its original fix time on retries.</summary>
+    [HttpPatch("maintenance/{issueId:guid}/resolve")]
+    [AuditAction("marked a maintenance issue fixed", "mark a maintenance issue fixed")]
+    public async Task<IActionResult> ResolveIssue(Guid hotelId, Guid issueId)
+    {
+        if (!await CanManageMaintenance(hotelId)) return Forbid();
+        var issues = database.Maintenance.Where(row => row.HotelId == hotelId && row.Id == issueId);
+        var fixedUtc = DateTime.UtcNow;
+        var updated = await issues.Where(row => !row.Resolved).ExecuteUpdateAsync(set =>
+            set.SetProperty(row => row.Resolved, true).SetProperty(row => row.FixedUtc, fixedUtc));
+        return updated > 0 || await issues.AnyAsync() ? NoContent() : NotFound();
     }
 
     private static string? NormalizeDescription(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

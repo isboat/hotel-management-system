@@ -134,3 +134,29 @@ textarea { width: 100%; resize: vertical; font: inherit; border: 1px solid #aebd
 .confirmation-details dt { color: var(--muted); }
 .confirmation-details dd { margin: 0; min-width: 0; text-align: right; font-weight: 650; overflow-wrap: anywhere; }
 .confirmation-actions { justify-content: flex-end; gap: .65rem; }
+
+.room-sections { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0; }
+.room-sections button { justify-content: center; color: var(--green); background: var(--paper); }
+.room-sections button[aria-pressed="true"] { background: var(--green); color: white; }
+.room-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); }
+.room-card .section-title h2 { display: flex; align-items: center; gap: .5rem; margin: 0; }
+.maintenance-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.65fr);
+  gap: 1rem;
+  align-items: start;
+}
+.maintenance-history { min-width: 0; }
+.maintenance-layout:not(:has(.maintenance-report)) { grid-template-columns: minmax(0, 1fr); }
+.maintenance-list { display: grid; gap: .65rem; margin-top: .85rem; }
+.maintenance-list:empty { display: none; }
+.maintenance-issue { padding: .8rem; border: 1px solid var(--border); border-radius: .65rem; }
+.maintenance-issue h3 { font-size: 1rem; }
+.maintenance-open { color: #69400e; background: #fbefda; }
+.maintenance-report h2 { display: flex; align-items: center; gap: .5rem; }
+.issue-dates { display: flex; flex-wrap: wrap; gap: .4rem 1rem; margin: .65rem 0; font-size: .85rem; }
+.issue-dates dt { font-weight: 650; }
+.issue-dates dd { margin: 0; color: var(--muted); }
+@media (max-width: 760px) {
+  .maintenance-layout { grid-template-columns: minmax(0, 1fr); }
+}

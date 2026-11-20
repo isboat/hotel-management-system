@@ -246,8 +246,14 @@ namespace Hms.Api.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("FixedUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<Guid>("HotelId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ReportedUtc")
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("Resolved")
                         .HasColumnType("bit");

@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { BedDouble } from 'lucide-react'
+import { BedDouble, Wrench } from 'lucide-react'
 import { currency, toPesewas } from './api'
 import type { Api } from './api'
 import { ActionForm, DescribedField, field, Notice, useRecords } from './components'
+import { RoomMaintenance } from './RoomMaintenance'
 import type { Room } from './types'
 
 export function Rooms({ api, path, role }: { api: Api; path: string; role: string }) {
@@ -10,9 +11,11 @@ export function Rooms({ api, path, role }: { api: Api; path: string; role: strin
   const [selected, setSelected] = useState<Room>()
   const [editing, setEditing] = useState(false)
   const [filter, setFilter] = useState('')
+  const [section, setSection] = useState<'inventory' | 'maintenance'>('inventory')
   const [feedback, setFeedback] = useState('')
   const manager = ['Manager', 'Administrator'].includes(role)
-  const canClean = role !== 'FrontDesk'
+  const canClean = ['Housekeeping', 'Supervisor', 'Manager', 'Administrator'].includes(role)
+  const visibleRooms = rows.filter(room => `${room.number} ${room.type}`.toLowerCase().includes(filter.trim().toLowerCase()))
 
   async function update(suffix: string, method: string, data?: unknown) {
     setFeedback('')
@@ -22,9 +25,18 @@ export function Rooms({ api, path, role }: { api: Api; path: string; role: strin
 
   return <>
     <div className="section-title"><div><h1>Rooms</h1><p>Inventory and housekeeping</p></div>
-      {manager && <button onClick={() => { setSelected(undefined); setEditing(true) }}>Add room</button>}
+      {manager && section === 'inventory' && <button onClick={() => { setSelected(undefined); setEditing(true) }}>Add room</button>}
     </div>
     <Notice text={error || feedback} />
+    {canClean && <nav className="room-sections" aria-label="Room sections">
+      <button type="button" className="secondary" aria-pressed={section === 'inventory'} onClick={() => setSection('inventory')}>
+        <BedDouble size={17} /> Room inventory
+      </button>
+      <button type="button" className="secondary" aria-pressed={section === 'maintenance'} onClick={() => setSection('maintenance')}>
+        <Wrench size={17} /> Maintenance
+      </button>
+    </nav>}
+    {section === 'maintenance' && canClean ? <RoomMaintenance api={api} path={path} rooms={rows} /> : <>
     {editing && <section className="panel">
       <h2>{selected ? `Edit room ${selected.number}` : 'Add room'}</h2>
       <ActionForm key={selected?.id ?? 'new'} label="Save room" action={async data => {
@@ -47,10 +59,9 @@ export function Rooms({ api, path, role }: { api: Api; path: string; role: strin
       <button className="text-button" onClick={() => setEditing(false)}>Cancel</button>
     </section>}
     <label className="search">Find a room<input value={filter} onChange={event => setFilter(event.target.value)} placeholder="Room number or type" /></label>
-    <div className="card-grid">{rows.filter(room => `${room.number} ${room.type}`.toLowerCase().includes(filter.toLowerCase())).map(room =>
+    <div className="card-grid room-grid">{visibleRooms.map(room =>
       <article className="panel room-card" key={room.id}>
-        <div className="section-title"><BedDouble size={22} /><span className="status">{room.outOfService ? 'Out of service' : room.status}</span></div>
-        <h2>Room {room.number}</h2>
+        <div className="section-title"><h2><BedDouble size={20} aria-hidden="true" /> Room {room.number}</h2><span className="status">{room.outOfService ? 'Out of service' : room.status}</span></div>
         <p>{room.type} · Sleeps {room.capacity}</p>
         {room.description && <p className="multiline-text">{room.description}</p>}
         <strong>{currency(room.rate)} / night</strong>
@@ -60,13 +71,7 @@ export function Rooms({ api, path, role }: { api: Api; path: string; role: strin
         {manager && <div className="actions"><button className="secondary" onClick={() => { setSelected(room); setEditing(true) }}>Edit</button>
           <button className="secondary danger" onClick={() => { if (confirm(`Remove room ${room.number} from inventory?`)) void update(`/rooms/${room.id}`, 'DELETE') }}>Remove</button></div>}
       </article>)}</div>
-    {!rows.length && <p className="empty">No rooms in this property yet.</p>}
-    {canClean && rows.length > 0 && <section className="panel"><h2>Report maintenance</h2>
-      <ActionForm label="Report issue" action={async data => {
-        await api(`${path}/maintenance`, 'POST', { roomId: field(data, 'room'), description: field(data, 'description') })
-        setFeedback('Maintenance issue reported.')
-      }}><div className="fields"><label>Room<select name="room">{rows.map(room => <option key={room.id} value={room.id}>{room.number}</option>)}</select></label>
-        <DescribedField label="Issue" description="Describe the problem and where it is in the room, such as a leak under the bathroom sink."><input name="description" required maxLength={500} /></DescribedField></div>
-      </ActionForm></section>}
+    {!visibleRooms.length && !error && <p className="empty">{rows.length ? 'No rooms match your search.' : 'No rooms in this property yet.'}</p>}
+    </>}
   </>
 }

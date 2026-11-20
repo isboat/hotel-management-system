@@ -15,6 +15,8 @@ public static class LocalDatabaseSetup
         await AddMissingColumn(database, "Hotels", "Telephone", """ALTER TABLE "Hotels" ADD COLUMN "Telephone" TEXT NULL""");
         await AddMissingColumn(database, "Hotels", "Description", """ALTER TABLE "Hotels" ADD COLUMN "Description" TEXT NULL""");
         await AddMissingColumn(database, "Hotels", "Address", """ALTER TABLE "Hotels" ADD COLUMN "Address" TEXT NULL""");
+        await AddMissingColumn(database, "Maintenance", "ReportedUtc", """ALTER TABLE "Maintenance" ADD COLUMN "ReportedUtc" TEXT NULL""");
+        await AddMissingColumn(database, "Maintenance", "FixedUtc", """ALTER TABLE "Maintenance" ADD COLUMN "FixedUtc" TEXT NULL""");
         await transaction.CommitAsync();
     }
 
