@@ -9,7 +9,7 @@ export function Guests({ api, path }: { api: Api; path: string }) {
   const [detailsError, setDetailsError] = useState('')
   const [guest, setGuest] = useState<Guest>()
   const profiles = useRecords<Guest>(api, `${path}/guests?search=${encodeURIComponent(query)}`)
-  const history = useRecords<Stay>(api, guest ? `${path}/guests/${guest.id}/stays` : null)
+  const history = useRecords<Stay & { roomNumber: string }>(api, guest ? `${path}/guests/${guest.id}/stays` : null)
   async function openGuest(id: string, edit: boolean) {
     setDetailsError('')
     try {
@@ -45,7 +45,9 @@ export function Guests({ api, path }: { api: Api; path: string }) {
       {guest.phone && <p>Phone {guest.phone}</p>}
       {guest.preferences && <p>Preferences {guest.preferences}</p>}
       <h3>Stay history</h3>
-      {history.rows.length ? <ul>{history.rows.map(stay => <li key={stay.id}>{stay.arrival} to {stay.departure} · {stay.status}</li>)}</ul> : <p>No linked stays.</p>}
+      {history.rows.length ? <ul>{history.rows.map(stay => <li key={stay.id}>
+        <strong>Room {stay.roomNumber}</strong> · {stay.arrival} to {stay.departure} · {stay.status.replace(/([a-z])([A-Z])/g, '$1 $2')}
+      </li>)}</ul> : <p>No linked stays.</p>}
       <button className="text-button" onClick={() => setGuest(undefined)}>Close</button>
     </section>}
     <div className="record-list">{profiles.rows.map(row => <article className="panel record" key={row.id}>

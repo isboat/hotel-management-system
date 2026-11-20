@@ -39,8 +39,15 @@ public sealed class GuestsController(HotelDatabase database, TenantAccess access
     [AuditAction("viewed a guest’s stay history", "view guest stay history")]
     public async Task<IActionResult> History(Guid hotelId, Guid guestId) =>
         await CanManage(hotelId)
-            ? Ok(await database.Reservations.Where(row => row.HotelId == hotelId && row.GuestId == guestId)
-                .OrderByDescending(row => row.Arrival).Take(100).ToListAsync())
+            ? Ok(await (from stay in database.Reservations
+                        where stay.HotelId == hotelId && stay.GuestId == guestId
+                        join room in database.Rooms on new { stay.HotelId, Id = stay.RoomId } equals new { room.HotelId, room.Id }
+                        orderby stay.Arrival descending, stay.Id
+                        select new
+                        {
+                            stay.HotelId, stay.Id, stay.RoomId, stay.Guest, stay.Arrival, stay.Departure,
+                            stay.Total, stay.Status, stay.GuestId, RoomNumber = room.Number
+                        }).Take(100).ToListAsync())
             : Forbid();
 
     [HttpPost]
