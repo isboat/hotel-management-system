@@ -80,6 +80,11 @@ public sealed class HotelApiTests
             var stay = await Read(Assert.Single(results, response => response.IsSuccessStatusCode));
             var folio = $"{path}/folios/{stay.GetProperty("id").GetString()}";
             var shift = await Read(await staff.PostAsJsonAsync($"{path}/cash-shifts", new { amount = 10000 }));
+            var shifts = await Read(await staff.GetAsync($"{path}/cash-shifts"));
+            var listedShift = Assert.Single(shifts.EnumerateArray());
+            Assert.Equal("Property Admin", listedShift.GetProperty("cashierName").GetString());
+            Assert.Equal("ADMIN@EXAMPLE.TEST", listedShift.GetProperty("cashierEmail").GetString());
+            Assert.Equal(10000, listedShift.GetProperty("float").GetInt64());
             var cash = new { reference = "test-receipt", amount = 25000, tendered = 30000 };
             var receipt = await Read(await staff.PostAsJsonAsync($"{folio}/payments", cash));
             var retry = await Read(await staff.PostAsJsonAsync($"{folio}/payments", cash));

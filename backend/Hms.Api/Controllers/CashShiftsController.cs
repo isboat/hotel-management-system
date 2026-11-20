@@ -19,8 +19,20 @@ public sealed class CashShiftsController(HotelDatabase database, TenantAccess ac
     {
         if (!await CanOperate(hotelId)) return Forbid();
         var manager = await access.Allows(User, hotelId, "Manager", "Administrator");
-        return Ok(await database.CashShifts.Where(row => row.HotelId == hotelId && (manager || row.CashierId == TenantAccess.Actor(User)))
-            .OrderByDescending(row => row.OpenedUtc).Take(100).ToListAsync());
+        var actorId = TenantAccess.Actor(User);
+        var shifts = from shift in database.CashShifts
+                     where shift.HotelId == hotelId && (manager || shift.CashierId == actorId)
+                     join staff in database.Staff on shift.CashierId equals staff.Id into cashiers
+                     from cashier in cashiers.DefaultIfEmpty()
+                     orderby shift.OpenedUtc descending, shift.Id
+                     select new
+                     {
+                         shift.HotelId, shift.Id, shift.CashierId, shift.OpenedUtc, shift.Float,
+                         shift.ClosedUtc, shift.Counted, shift.Expected,
+                         CashierName = cashier == null ? null : cashier.Name,
+                         CashierEmail = cashier == null ? null : cashier.Email
+                     };
+        return Ok(await shifts.Take(100).ToListAsync());
     }
 
     [HttpPost]
