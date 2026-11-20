@@ -41,7 +41,7 @@ export function Reservations({ api, path, canRefund, property }: { api: Api; pat
 
   return <>
     {confirmation && <ConfirmationOverlay review={confirmation.review} onDecision={confirmation.decide} />}
-    <PageHeading title="Reservations" image="/heroes/reservations.webp" icon={CalendarDays} subtitle="Arrivals, departures and guest folios"><button onClick={() => { setAvailability(undefined); setBookingGuest(undefined); setGuestSearch(''); setBooking(value => !value) }}><Plus size={17} aria-hidden="true" /> New reservation</button></PageHeading>
+    <PageHeading title="Reservations" icon={CalendarDays} subtitle="Arrivals, departures and guest folios"><button onClick={() => { setAvailability(undefined); setBookingGuest(undefined); setGuestSearch(''); setBooking(value => !value) }}><Plus size={17} aria-hidden="true" /> New reservation</button></PageHeading>
     <Notice text={error || errorText} />
     {booking && <section className="panel"><h2>Find availability</h2>
       <ActionForm label="Find rooms" action={async () => {

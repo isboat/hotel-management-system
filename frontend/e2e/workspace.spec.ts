@@ -6,10 +6,10 @@ async function navigateTo(page: Page, name: string) {
   const menu = page.getByRole('button', { name: 'Open navigation' })
   if (await menu.isVisible()) await menu.click()
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name, exact: true }).click()
-  const hero = page.locator('main .workspace-hero')
-  await expect(hero.getByRole('heading', { level: 1 })).toBeVisible()
+  const workspace = page.locator('.workspace')
+  await expect(workspace.getByRole('heading', { level: 1 })).toBeVisible()
   const photo = name === 'Overview' ? '/hotel-lobby.webp' : `/heroes/${name.toLowerCase().replaceAll(' ', '-')}.webp`
-  await expect.poll(() => hero.evaluate(element => getComputedStyle(element, '::before').backgroundImage)).toContain(photo)
+  await expect.poll(() => workspace.evaluate(element => getComputedStyle(element, '::before').backgroundImage)).toContain(photo)
   expect((await page.request.get(photo)).ok()).toBeTruthy()
 }
 

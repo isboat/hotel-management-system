@@ -29,7 +29,7 @@ export function Overview({ api, path, property, frontDesk, navigate }: {
   ]
 
   return <>
-    <m.section className="workspace-hero overview-hero" initial={reducedMotion ? false : { opacity: .75, y: 8 }}
+    <m.section className="overview-hero" initial={reducedMotion ? false : { opacity: .75, y: 8 }}
       animate={{ opacity: 1, y: 0 }} transition={{ duration: .3, ease: 'easeOut' }}>
       <div className="hero-body">
         <p className="hero-date"><CalendarDays size={15} aria-hidden="true" />

@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { BedDouble, Building2, CalendarDays, ChartNoAxesCombined, ClipboardList, ContactRound, LayoutDashboard, LogOut, Menu, Users, Wallet } from 'lucide-react'
 import { domAnimation, LazyMotion, MotionConfig, m, useReducedMotion } from 'framer-motion'
@@ -66,6 +67,10 @@ function Workspace({ session, onRotate, onLogout }: {
       ...(manager ? [{ name: 'Staff', icon: Users }, { name: 'Reports', icon: ChartNoAxesCombined }] : []),
       ...(role === 'Administrator' ? [{ name: 'Hotel details', icon: Building2 }, { name: 'Audit log', icon: ClipboardList }] : []),
     ]
+  const activePage = !session.isSystemAdmin && !hotel ? 'Properties'
+    : items.some(item => item.name === page) ? page : 'Overview'
+  const photo = activePage === 'Overview' ? '/hotel-lobby.webp'
+    : `/heroes/${activePage.toLowerCase().replaceAll(' ', '-')}.webp`
   const navigation = {
     hotels, hotel, page, items,
     onNavigate: (next: string) => { setPage(next); closeDrawer() },
@@ -76,7 +81,7 @@ function Workspace({ session, onRotate, onLogout }: {
   return <div className="shell">
     <aside className="sidebar"><WorkspaceNavigation {...navigation} /></aside>
     {drawerOpen && <NavigationDrawer {...navigation} onClose={closeDrawer} />}
-    <div className="workspace">
+    <div className="workspace" style={{ '--page-photo': `url("${photo}")` } as CSSProperties}>
       <header className="workspace-header">
         <div className="header-location">
           <button className="secondary menu-toggle" type="button" aria-label="Open navigation" aria-expanded={drawerOpen}
@@ -100,7 +105,7 @@ function Workspace({ session, onRotate, onLogout }: {
         transition={{ duration: .22, ease: 'easeOut' }}>
         <Notice text={error} />
         {session.isSystemAdmin ? (page === 'Tenants' ? <Tenants api={api} /> : <AuditLog api={api} path="/platform" />)
-          : !hotel ? <><PageHeading title="Properties" image="/heroes/properties.webp" icon={Building2} /><p className="empty">No active property available.</p></>
+          : !hotel ? <><PageHeading title="Properties" icon={Building2} /><p className="empty">No active property available.</p></>
           : page === 'Rooms' ? <Rooms api={api} path={path} role={role} />
           : page === 'Reservations' && frontDesk ? <Reservations api={api} path={path} canRefund={manager} property={hotel.name} />
           : page === 'Cash desk' && frontDesk ? <CashDesk api={api} path={path} staffId={session.id} />

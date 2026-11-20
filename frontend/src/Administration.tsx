@@ -21,7 +21,7 @@ export function StaffDirectory({ api, path, role }: { api: Api; path: string; ro
     } catch (failure) { setFeedback((failure as Error).message) }
   }
   return <>
-    <PageHeading title="Staff" image="/heroes/staff.webp" icon={Users} />
+    <PageHeading title="Staff" icon={Users} />
     <Notice text={error || feedback} />
     {resetCode && <div className="panel" role="status"><p>Share this single-use code privately with the staff member. It expires in 30 minutes.</p><code>{resetCode}</code>
       <button className="secondary" onClick={() => setResetCode('')}>Dismiss</button></div>}
@@ -95,7 +95,7 @@ export function HotelDetails({ api, path, onSaved }: { api: Api; path: string; o
     return () => { current = false }
   }, [api, endpoint])
 
-  return <><PageHeading title="Hotel details" image="/heroes/hotel-details.webp" icon={Settings2} /><Notice text={error} />
+  return <><PageHeading title="Hotel details" icon={Settings2} /><Notice text={error} />
     {saved && <p role="status">Hotel details saved.</p>}
     {!hotel && !error && <p role="status">Loading hotel details…</p>}
     {hotel && <section className="panel">
@@ -114,7 +114,7 @@ export function Tenants({ api }: { api: Api }) {
   const [selected, setSelected] = useState<Hotel>()
   const [editingHotel, setEditingHotel] = useState<Hotel>()
   const [feedback, setFeedback] = useState('')
-  return <><PageHeading title="Hotel tenants" image="/heroes/tenants.webp" icon={Building2} /><Notice text={error || feedback} />
+  return <><PageHeading title="Hotel tenants" icon={Building2} /><Notice text={error || feedback} />
     <section className="panel"><h2>Create a tenant</h2><ActionForm label="Create tenant" action={async data => {
       const hotel = await api<Hotel>('/platform/properties', 'POST', hotelDetails(data))
       setSelected(hotel); reload()
@@ -171,7 +171,7 @@ export function AuditLog({ api, path }: { api: Api; path: string }) {
 
   const result = data?.url === url ? data : undefined
   const failure = error?.url === url ? error.message : ''
-  return <><PageHeading title="Audit log" image="/heroes/audit-log.webp" icon={ClipboardList} /><Notice text={failure} />
+  return <><PageHeading title="Audit log" icon={ClipboardList} /><Notice text={failure} />
     <div className="fields"><label>Filter activity<input value={query} onChange={event => { setQuery(event.target.value); setPage({ number: 1 }) }} placeholder="Name, email or action" /></label>
       <label>Outcome<select value={outcome} onChange={event => { setOutcome(event.target.value); setPage({ number: 1 }) }}><option value="">All outcomes</option><option value="success">Successful</option><option value="failure">Failed or denied</option></select></label></div>
     <div className="record-list">{result?.items.map(row => {
@@ -202,7 +202,7 @@ type Occupancy = { sold: number; available: number; revenue: number; occupancy: 
 
 export function Reports({ api, path }: { api: Api; path: string }) {
   const [report, setReport] = useState<Occupancy>()
-  return <><PageHeading title="Reports" image="/heroes/reports.webp" icon={ChartNoAxesCombined} /><section className="panel"><h2>Booking occupancy</h2>
+  return <><PageHeading title="Reports" icon={ChartNoAxesCombined} /><section className="panel"><h2>Booking occupancy</h2>
     <ActionForm label="Run report" action={async data => setReport(await api<Occupancy>(
       `${path}/reports/occupancy?arrival=${field(data, 'arrival')}&departure=${field(data, 'departure')}`))}>
       <div className="fields"><label>From<input type="date" name="arrival" required defaultValue={today()} /></label>

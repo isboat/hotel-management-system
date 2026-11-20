@@ -9,7 +9,7 @@ export function CashDesk({ api, path, staffId }: { api: Api; path: string; staff
   const endpoint = `${path}/cash-shifts`
   const { rows, error, reload } = useRecords<Shift>(api, endpoint)
   const ownShift = rows.find(shift => shift.cashierId === staffId && !shift.closedUtc)
-  return <><PageHeading title="Cash desk" image="/heroes/cash-desk.webp" icon={Wallet} /><Notice text={error} />
+  return <><PageHeading title="Cash desk" icon={Wallet} /><Notice text={error} />
     {!ownShift && <section className="panel"><h2>Open a cash shift</h2>
       <ActionForm label="Open shift" action={async data => {
         await api(endpoint, 'POST', { amount: toPesewas(field(data, 'amount')) }); reload()
