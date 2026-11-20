@@ -28,7 +28,7 @@ Continue with the [first system administrator setup](../backend/README.md#3-conf
 
 ## Regenerate the schema script after a model change
 
-The [EF Core migration source](../backend/Hms.Api/Data/Migrations/) is the input used to generate the T-SQL. From the repository root, use .NET 10 and `dotnet-ef` 10.0.12 to regenerate the script after adding a migration. The operator applying the resulting script in SSMS only needs the SQL file.
+The [EF Core migration source](../backend/Hms.Api/Data/Migrations/README.md) is the input used to generate the T-SQL. From the repository root, use .NET 10 and `dotnet-ef` 10.0.12 to regenerate the script after adding a migration. The operator applying the resulting script in SSMS only needs the SQL file.
 
 ```sh
 dotnet restore backend/Hms.Api
