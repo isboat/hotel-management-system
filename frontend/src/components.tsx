@@ -1,9 +1,24 @@
 import { cloneElement, useEffect, useId, useState } from 'react'
 import type { FormEvent, ReactElement, ReactNode } from 'react'
-import { Building2, CircleAlert } from 'lucide-react'
+import { CircleAlert } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { m, useReducedMotion } from 'framer-motion'
+import { Brand } from './WorkspaceNavigation'
 import { createApi } from './api'
 import type { Api } from './api'
 import type { Session } from './types'
+
+export function PageHeading({ title, icon: Icon, subtitle, children }: {
+  title: string; icon: LucideIcon; subtitle?: string; children?: ReactNode
+}) {
+  return <header className="page-heading">
+    <div className="page-heading-title">
+      <span className="page-icon"><Icon size={22} aria-hidden="true" /></span>
+      <div><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>
+    </div>
+    {children && <div className="actions page-heading-actions">{children}</div>}
+  </header>
+}
 
 export function DescribedField({ label, description, children, checkbox = false }: {
   label: string
@@ -59,15 +74,20 @@ export function ActionForm({ children, action, label }: {
 export const field = (data: FormData, key: string) => String(data.get(key) ?? '')
 
 export function SignIn({ onSession }: { onSession: (session: Session) => void }) {
+  const reducedMotion = useReducedMotion()
   const [reset, setReset] = useState(false)
   const [success, setSuccess] = useState(false)
   return <main className="sign-in">
     <section className="welcome">
-      <span className="brand"><Building2 size={23} /> Hotel Management</span>
-      <h1>One workspace for your hotel.</h1>
-      <p>Manage stays, room readiness and cash payments across your property.</p>
+      <Brand />
+      <m.div initial={reducedMotion ? false : { opacity: .6, y: 12 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: .4, ease: 'easeOut' }}>
+        <h1>One workspace for your hotel.</h1>
+        <p>Manage stays, room readiness and cash payments across your property.</p>
+      </m.div>
     </section>
-    <section className="sign-in-form">
+    <m.section className="sign-in-form" initial={reducedMotion ? false : { opacity: .6, y: 10 }}
+      animate={{ opacity: 1, y: 0 }} transition={{ duration: .32, ease: 'easeOut' }}>
       <h2>{reset ? 'Reset password' : 'Sign in'}</h2>
       {success && <p role="status">Password updated. Sign in with your new password.</p>}
       <ActionForm key={String(reset)} label={reset ? 'Update password' : 'Sign in'} action={async data => {
@@ -85,6 +105,6 @@ export function SignIn({ onSession }: { onSession: (session: Session) => void })
         </DescribedField> : <label>Password<input name="password" type="password" required autoComplete="current-password" /></label>}
       </ActionForm>
       <button className="text-button" onClick={() => setReset(value => !value)}>{reset ? 'Back to sign in' : 'I have a reset code'}</button>
-    </section>
+    </m.section>
   </main>
 }

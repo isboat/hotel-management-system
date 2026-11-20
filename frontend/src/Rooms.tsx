@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { BedDouble, Wrench } from 'lucide-react'
 import { currency, toPesewas } from './api'
 import type { Api } from './api'
-import { ActionForm, DescribedField, field, Notice, useRecords } from './components'
+import { ActionForm, DescribedField, field, Notice, PageHeading, useRecords } from './components'
 import { RoomMaintenance } from './RoomMaintenance'
 import type { Room } from './types'
 
@@ -24,9 +24,9 @@ export function Rooms({ api, path, role }: { api: Api; path: string; role: strin
   }
 
   return <>
-    <div className="section-title"><div><h1>Rooms</h1><p>Inventory and housekeeping</p></div>
+    <PageHeading title="Rooms" icon={BedDouble} subtitle="Inventory and housekeeping">
       {manager && section === 'inventory' && <button onClick={() => { setSelected(undefined); setEditing(true) }}>Add room</button>}
-    </div>
+    </PageHeading>
     <Notice text={error || feedback} />
     {canClean && <nav className="room-sections" aria-label="Room sections">
       <button type="button" className="secondary" aria-pressed={section === 'inventory'} onClick={() => setSection('inventory')}>
@@ -61,7 +61,7 @@ export function Rooms({ api, path, role }: { api: Api; path: string; role: strin
     <label className="search">Find a room<input value={filter} onChange={event => setFilter(event.target.value)} placeholder="Room number or type" /></label>
     <div className="card-grid room-grid">{visibleRooms.map(room =>
       <article className="panel room-card" key={room.id}>
-        <div className="section-title"><h2><BedDouble size={20} aria-hidden="true" /> Room {room.number}</h2><span className="status">{room.outOfService ? 'Out of service' : room.status}</span></div>
+        <div className="section-title"><h2><BedDouble size={20} aria-hidden="true" /> Room {room.number}</h2><span className={`status ${room.outOfService || room.status === 'Dirty' ? 'is-warning' : 'is-positive'}`}>{room.outOfService ? 'Out of service' : room.status}</span></div>
         <p>{room.type} · Sleeps {room.capacity}</p>
         {room.description && <p className="multiline-text">{room.description}</p>}
         <strong>{currency(room.rate)} / night</strong>

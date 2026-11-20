@@ -1,4 +1,17 @@
 import { expect, test } from '@playwright/test'
+import type { Page } from '@playwright/test'
+
+async function navigateTo(page: Page, name: string) {
+  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible()
+  const menu = page.getByRole('button', { name: 'Open navigation' })
+  if (await menu.isVisible()) await menu.click()
+  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name, exact: true }).click()
+  const workspace = page.locator('.workspace')
+  await expect(workspace.getByRole('heading', { level: 1 })).toBeVisible()
+  const photo = name === 'Overview' ? '/hotel-lobby.webp' : `/heroes/${name.toLowerCase().replaceAll(' ', '-')}.webp`
+  await expect.poll(() => workspace.evaluate(element => getComputedStyle(element, '::before').backgroundImage)).toContain(photo)
+  expect((await page.request.get(photo)).ok()).toBeTruthy()
+}
 
 test('front desk signs in and can navigate to room inventory', async ({ page }) => {
   await page.route('**/api/v1/**', async route => {
@@ -24,7 +37,7 @@ test('front desk signs in and can navigate to room inventory', async ({ page }) 
   await page.getByLabel('Password', { exact: true }).fill('example-password')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Accra Lodge', level: 1 })).toBeVisible()
-  await page.getByRole('button', { name: 'Rooms', exact: true }).click()
+  await navigateTo(page, 'Rooms')
   await expect(page.getByRole('heading', { name: 'Room 101' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Add room' })).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
@@ -65,7 +78,7 @@ test('audit log shows the staff identity, action, and Ghana time', async ({ page
   await page.getByLabel('Email address').fill('tom@example.test')
   await page.getByLabel('Password', { exact: true }).fill('example-password')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await page.getByRole('button', { name: 'Audit log' }).click()
+  await navigateTo(page, 'Audit log')
   await expect(page.getByText(/Tom \(tom@example.test\) logged in on 2 December 2026 at 11:20/i)).toBeVisible()
   const pages = page.getByRole('navigation', { name: 'Audit log pages' })
   await pages.getByRole('button', { name: 'Next' }).click()
@@ -129,7 +142,7 @@ test('folio posts charges and cash payments only after confirmation', async ({ p
   await page.getByLabel('Email address').fill('tom@example.test')
   await page.getByLabel('Password', { exact: true }).fill('example-password')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await page.getByRole('button', { name: 'Reservations', exact: true }).click()
+  await navigateTo(page, 'Reservations')
   await page.getByRole('button', { name: 'Folio' }).click()
   await page.getByLabel('Charge description').fill('Laundry')
   for (const [label, amount] of [
@@ -206,7 +219,7 @@ test('maintenance keeps fixed issues in history with their fix date', async ({ p
   await page.getByLabel('Email address').fill('tom@example.test')
   await page.getByLabel('Password', { exact: true }).fill('example-password')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await page.getByRole('button', { name: 'Rooms', exact: true }).click()
+  await navigateTo(page, 'Rooms')
   await page.getByRole('button', { name: 'Maintenance', exact: true }).click()
   await page.getByLabel('Issue', { exact: true }).fill('Bathroom leak')
   await page.getByRole('button', { name: 'Report issue' }).click()
@@ -251,7 +264,7 @@ test('staff confirm reservation creation and cancellation in the overlay', async
   await page.getByLabel('Email address').fill('tom@example.test')
   await page.getByLabel('Password', { exact: true }).fill('example-password')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await page.getByRole('button', { name: 'Reservations', exact: true }).click()
+  await navigateTo(page, 'Reservations')
   await page.getByRole('button', { name: 'New reservation' }).click()
   await page.getByLabel('Arrival', { exact: true }).fill('2026-12-01')
   await page.getByLabel('Departure', { exact: true }).fill('2026-12-03')
@@ -311,14 +324,14 @@ test('property administrator can edit the hotel telephone and address', async ({
   await page.getByLabel('Email address').fill('admin@example.test')
   await page.getByLabel('Password', { exact: true }).fill('example-password')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await page.getByRole('button', { name: 'Hotel details', exact: true }).click()
+  await navigateTo(page, 'Hotel details')
   await expect(page.getByLabel('Telephone')).toHaveValue('024 000 0000')
   await page.getByLabel('Telephone').fill('+233 24 555 1234')
   await page.getByLabel('Address', { exact: true }).fill('18 High Street, Accra')
   await page.getByRole('button', { name: 'Save hotel details' }).click()
   await expect(page.getByText('Hotel details saved.')).toBeVisible()
-  await page.getByRole('button', { name: 'Overview', exact: true }).click()
-  await page.getByRole('button', { name: 'Hotel details', exact: true }).click()
+  await navigateTo(page, 'Overview')
+  await navigateTo(page, 'Hotel details')
   await expect(page.getByLabel('Telephone')).toHaveValue('+233 24 555 1234')
   await expect(page.getByLabel('Address', { exact: true })).toHaveValue('18 High Street, Accra')
 })

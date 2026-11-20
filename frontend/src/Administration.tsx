@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
+import { BedDouble, Building2, CalendarCheck, ChartNoAxesCombined, ClipboardList, Coins, Percent, Settings2, TrendingUp, Users } from 'lucide-react'
 import { currency, today } from './api'
 import type { Api } from './api'
-import { ActionForm, DescribedField, field, Notice, useRecords } from './components'
+import { ActionForm, DescribedField, field, Notice, PageHeading, useRecords } from './components'
 import type { Audit, Hotel, Staff } from './types'
 
 export function StaffDirectory({ api, path, role }: { api: Api; path: string; role: string }) {
@@ -20,7 +21,7 @@ export function StaffDirectory({ api, path, role }: { api: Api; path: string; ro
     } catch (failure) { setFeedback((failure as Error).message) }
   }
   return <>
-    <h1>Staff</h1>
+    <PageHeading title="Staff" icon={Users} />
     <Notice text={error || feedback} />
     {resetCode && <div className="panel" role="status"><p>Share this single-use code privately with the staff member. It expires in 30 minutes.</p><code>{resetCode}</code>
       <button className="secondary" onClick={() => setResetCode('')}>Dismiss</button></div>}
@@ -38,7 +39,7 @@ export function StaffDirectory({ api, path, role }: { api: Api; path: string; ro
       </ActionForm><button className="text-button" onClick={() => setSelectedStaff(undefined)}>Cancel</button>
     </section>}
     <div className="record-list">{rows.map(member => <article className="panel record" key={member.id}>
-      <div><h2>{member.name}</h2><p>{member.email}</p></div><span className="status">{member.active ? member.role : 'Suspended'}</span>
+      <div><h2>{member.name}</h2><p>{member.email}</p></div><span className={`status ${member.active ? '' : 'is-warning'}`}>{member.active ? member.role : 'Suspended'}</span>
       {roles.includes(member.role) && <div className="actions">
         <button className="secondary" onClick={() => setSelectedStaff(member)}>Edit</button>
         <button className="secondary" onClick={() => void update(`${member.id}/status`, 'PATCH', { status: member.active ? 'Suspended' : 'Active' })}>{member.active ? 'Suspend' : 'Reactivate'}</button>
@@ -94,7 +95,7 @@ export function HotelDetails({ api, path, onSaved }: { api: Api; path: string; o
     return () => { current = false }
   }, [api, endpoint])
 
-  return <><h1>Hotel details</h1><Notice text={error} />
+  return <><PageHeading title="Hotel details" icon={Settings2} /><Notice text={error} />
     {saved && <p role="status">Hotel details saved.</p>}
     {!hotel && !error && <p role="status">Loading hotel details…</p>}
     {hotel && <section className="panel">
@@ -113,7 +114,7 @@ export function Tenants({ api }: { api: Api }) {
   const [selected, setSelected] = useState<Hotel>()
   const [editingHotel, setEditingHotel] = useState<Hotel>()
   const [feedback, setFeedback] = useState('')
-  return <><h1>Hotel tenants</h1><Notice text={error || feedback} />
+  return <><PageHeading title="Hotel tenants" icon={Building2} /><Notice text={error || feedback} />
     <section className="panel"><h2>Create a tenant</h2><ActionForm label="Create tenant" action={async data => {
       const hotel = await api<Hotel>('/platform/properties', 'POST', hotelDetails(data))
       setSelected(hotel); reload()
@@ -170,7 +171,7 @@ export function AuditLog({ api, path }: { api: Api; path: string }) {
 
   const result = data?.url === url ? data : undefined
   const failure = error?.url === url ? error.message : ''
-  return <><h1>Audit log</h1><Notice text={failure} />
+  return <><PageHeading title="Audit log" icon={ClipboardList} /><Notice text={failure} />
     <div className="fields"><label>Filter activity<input value={query} onChange={event => { setQuery(event.target.value); setPage({ number: 1 }) }} placeholder="Name, email or action" /></label>
       <label>Outcome<select value={outcome} onChange={event => { setOutcome(event.target.value); setPage({ number: 1 }) }}><option value="">All outcomes</option><option value="success">Successful</option><option value="failure">Failed or denied</option></select></label></div>
     <div className="record-list">{result?.items.map(row => {
@@ -182,7 +183,7 @@ export function AuditLog({ api, path }: { api: Api; path: string }) {
       const action = /^[A-Z]+$/.test(row.action) ? `made a ${row.action} request` : row.action
       return <article className="panel record" key={row.id}><div>
         <p className="break-anywhere"><strong>{actor}</strong> {action} on <time dateTime={timestamp}>{day} at {time}</time></p>
-        {row.outcome >= 400 && <span className="status">Failed ({row.outcome})</span>}
+        {row.outcome >= 400 && <span className="status is-danger">Failed ({row.outcome})</span>}
       </div></article>
     })}</div>
     {!result && !failure && <p role="status">Loading activity…</p>}
@@ -201,7 +202,7 @@ type Occupancy = { sold: number; available: number; revenue: number; occupancy: 
 
 export function Reports({ api, path }: { api: Api; path: string }) {
   const [report, setReport] = useState<Occupancy>()
-  return <><h1>Reports</h1><section className="panel"><h2>Booking occupancy</h2>
+  return <><PageHeading title="Reports" icon={ChartNoAxesCombined} /><section className="panel"><h2>Booking occupancy</h2>
     <ActionForm label="Run report" action={async data => setReport(await api<Occupancy>(
       `${path}/reports/occupancy?arrival=${field(data, 'arrival')}&departure=${field(data, 'departure')}`))}>
       <div className="fields"><label>From<input type="date" name="arrival" required defaultValue={today()} /></label>
@@ -209,23 +210,23 @@ export function Reports({ api, path }: { api: Api; path: string }) {
     </ActionForm></section>
     {report && <div className="card-grid">
       <article className="panel metric">
-        <p>Room nights booked</p><strong>{report.sold} / {report.available}</strong>
+        <div className="report-stat-label"><span className="metric-icon"><CalendarCheck size={18} aria-hidden="true" /></span><p>Room nights booked</p></div><strong>{report.sold} / {report.available}</strong>
         <p>Booked nights out of all available room nights in the selected period. One room booked for two nights counts as two.</p>
       </article>
       <article className="panel metric">
-        <p>Occupancy</p><strong>{report.occupancy.toFixed(1)}%</strong>
+        <div className="report-stat-label"><span className="metric-icon"><Percent size={18} aria-hidden="true" /></span><p>Occupancy</p></div><strong>{report.occupancy.toFixed(1)}%</strong>
         <p>The percentage of available room nights that were booked.</p>
       </article>
       <article className="panel metric">
-        <p>Room revenue</p><strong>{currency(report.revenue)}</strong>
+        <div className="report-stat-label"><span className="metric-icon"><Coins size={18} aria-hidden="true" /></span><p>Room revenue</p></div><strong>{currency(report.revenue)}</strong>
         <p>The value of room nights booked in the selected period, based on reservation rates. Extras and cash receipts are tracked separately.</p>
       </article>
       <article className="panel metric">
-        <p>Average daily rate</p><strong>{currency(report.adr)}</strong>
+        <div className="report-stat-label"><span className="metric-icon"><TrendingUp size={18} aria-hidden="true" /></span><p>Average daily rate</p></div><strong>{currency(report.adr)}</strong>
         <p>Room revenue divided by the number of booked room nights.</p>
       </article>
       <article className="panel metric">
-        <p>Revenue per available room</p><strong>{currency(report.revPar)}</strong>
+        <div className="report-stat-label"><span className="metric-icon"><BedDouble size={18} aria-hidden="true" /></span><p>Revenue per available room</p></div><strong>{currency(report.revPar)}</strong>
         <p>Room revenue divided by all available room nights, including nights that went unbooked.</p>
       </article>
     </div>}
