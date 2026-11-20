@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { BedDouble, Building2, CalendarDays, ChartNoAxesCombined, ClipboardList, LayoutDashboard, LogOut, Users, Wallet } from 'lucide-react'
 import { createApi, today } from './api'
 import type { Api } from './api'
-import { AuditLog, Reports, StaffDirectory, Tenants } from './Administration'
+import { AuditLog, HotelDetails, Reports, StaffDirectory, Tenants } from './Administration'
 import { CashDesk } from './CashDesk'
 import { Guests } from './Guests'
 import { Notice, SignIn, useRecords } from './components'
@@ -40,7 +40,7 @@ function Workspace({ session, onRotate, onLogout }: {
 }) {
   const api = useMemo(() => createApi(session.token, session.refreshToken, tokens => onRotate(session, tokens),
     () => onLogout(session)), [session, onRotate, onLogout])
-  const { rows: hotels, error } = useRecords<Hotel>(api, session.isSystemAdmin ? null : '/auth/properties')
+  const { rows: hotels, error, reload: reloadHotels } = useRecords<Hotel>(api, session.isSystemAdmin ? null : '/auth/properties')
   const [hotelId, setHotelId] = useState('')
   const [page, setPage] = useState(session.isSystemAdmin ? 'Tenants' : 'Overview')
   const [signingOut, setSigningOut] = useState(false)
@@ -55,7 +55,7 @@ function Workspace({ session, onRotate, onLogout }: {
       { name: 'Overview', icon: LayoutDashboard }, { name: 'Rooms', icon: BedDouble },
       ...(frontDesk ? [{ name: 'Reservations', icon: CalendarDays }, { name: 'Guests', icon: Users }, { name: 'Cash desk', icon: Wallet }] : []),
       ...(manager ? [{ name: 'Staff', icon: Users }, { name: 'Reports', icon: ChartNoAxesCombined }] : []),
-      ...(role === 'Administrator' ? [{ name: 'Audit log', icon: ClipboardList }] : []),
+      ...(role === 'Administrator' ? [{ name: 'Hotel details', icon: Building2 }, { name: 'Audit log', icon: ClipboardList }] : []),
     ]
   return <div className="shell">
     <aside className="sidebar">
@@ -84,6 +84,7 @@ function Workspace({ session, onRotate, onLogout }: {
           : page === 'Guests' && frontDesk ? <Guests api={api} path={path} />
           : page === 'Staff' && manager ? <StaffDirectory api={api} path={path} role={role} />
           : page === 'Reports' && manager ? <Reports api={api} path={path} />
+          : page === 'Hotel details' && role === 'Administrator' ? <HotelDetails api={api} path={path} onSaved={reloadHotels} />
           : page === 'Audit log' && role === 'Administrator' ? <AuditLog api={api} path={path} />
           : <Overview api={api} path={path} property={hotel.name} frontDesk={frontDesk} navigate={setPage} />}
       </main>
@@ -99,7 +100,8 @@ function Overview({ api, path, property, frontDesk, navigate }: {
   const arrivals = useRecords<Stay>(api, frontDesk ? `${path}/reservations?status=Confirmed&arrival=${date}` : null)
   const departures = useRecords<Stay>(api, frontDesk ? `${path}/reservations?status=CheckedIn&departure=${date}` : null)
   return <>
-    <h1>Overview</h1><p className="subtitle">{property} · {new Intl.DateTimeFormat('en-GH', { dateStyle: 'long', timeZone: 'Africa/Accra' }).format(new Date())}</p>
+    <h1 className="overview-hotel-name">{property}</h1>
+    <p className="subtitle">{new Intl.DateTimeFormat('en-GH', { dateStyle: 'long', timeZone: 'Africa/Accra' }).format(new Date())}</p>
     <Notice text={rooms.error || arrivals.error || departures.error} />
     <div className="card-grid">
       <article className="panel metric"><BedDouble size={20} /><p>Rooms ready</p><strong>{rooms.rows.filter(room => !room.outOfService && room.status !== 'Dirty').length}</strong></article>

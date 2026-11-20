@@ -23,8 +23,7 @@ public sealed class PlatformController(HotelDatabase database) : ControllerBase
     public async Task<IActionResult> Create(HotelInput input)
     {
         if (!await IsAdministrator()) return Forbid();
-        var hotel = new Hotel(Guid.NewGuid(), input.Name.Trim(), Telephone: Normalize(input.Telephone),
-            Description: Normalize(input.Description), Address: Normalize(input.Address));
+        var hotel = input.ApplyTo(new Hotel(Guid.NewGuid(), input.Name));
         database.Hotels.Add(hotel);
         await database.SaveChangesAsync();
         return Ok(hotel);
@@ -35,15 +34,11 @@ public sealed class PlatformController(HotelDatabase database) : ControllerBase
     public async Task<IActionResult> Edit(Guid hotelId, HotelInput input)
     {
         if (!await IsAdministrator()) return Forbid();
-        var telephone = Normalize(input.Telephone);
-        var description = Normalize(input.Description);
-        var address = Normalize(input.Address);
-        var updated = await database.Hotels.Where(row => row.Id == hotelId)
-            .ExecuteUpdateAsync(set => set.SetProperty(row => row.Name, input.Name.Trim())
-                .SetProperty(row => row.Telephone, telephone)
-                .SetProperty(row => row.Description, description)
-                .SetProperty(row => row.Address, address));
-        return updated == 0 ? NotFound() : NoContent();
+        var hotel = await database.Hotels.FindAsync(hotelId);
+        if (hotel is null) return NotFound();
+        database.Entry(hotel).CurrentValues.SetValues(input.ApplyTo(hotel));
+        await database.SaveChangesAsync();
+        return NoContent();
     }
 
     [HttpPatch("properties/{hotelId:guid}")]
@@ -69,5 +64,4 @@ public sealed class PlatformController(HotelDatabase database) : ControllerBase
         return Ok(await AuditLogPage.ReadAsync(events, database.Staff, offset, pageSize, snapshot, search, result));
     }
 
-    private static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

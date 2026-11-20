@@ -52,6 +52,14 @@ public sealed class HotelApiTests
             Assert.NotEqual(refresh.refreshToken, rotated.GetProperty("refreshToken").GetString());
             Assert.Equal(HttpStatusCode.Unauthorized, (await staff.PostAsJsonAsync("/api/v1/auth/refresh", refresh)).StatusCode);
             var path = $"/api/v1/properties/{hotel}";
+            var propertyDetails = await Read(await staff.GetAsync($"{path}/details"));
+            Assert.Equal(detailsUpdate.telephone, propertyDetails.GetProperty("telephone").GetString());
+            var propertyEdit = new { name = "Accra Lodge", telephone = "+233 20 555 2010", description = "Guest house", address = "18 High Street, Accra" };
+            await Read(await staff.PutAsJsonAsync($"{path}/details", propertyEdit));
+            var savedDetails = await Read(await staff.GetAsync($"{path}/details"));
+            Assert.Equal(propertyEdit.telephone, savedDetails.GetProperty("telephone").GetString());
+            Assert.Equal(propertyEdit.address, savedDetails.GetProperty("address").GetString());
+            Assert.Equal(HttpStatusCode.Forbidden, (await staff.PutAsJsonAsync($"/api/v1/properties/{other}/details", propertyEdit)).StatusCode);
             Assert.Equal(HttpStatusCode.Forbidden, (await staff.PostAsJsonAsync("/api/v1/platform/properties", new { name = "Denied" })).StatusCode);
             var guest = await Read(await staff.PostAsJsonAsync($"{path}/guests", new { name = "Smith", idNumber = "  GHA-00123  " }));
             var guestId = guest.GetProperty("id").GetGuid();

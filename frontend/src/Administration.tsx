@@ -79,6 +79,35 @@ function HotelDetailsFields({ hotel }: { hotel?: Hotel }) {
   </>
 }
 
+export function HotelDetails({ api, path, onSaved }: { api: Api; path: string; onSaved: () => void }) {
+  const [hotel, setHotel] = useState<Hotel>()
+  const [error, setError] = useState('')
+  const [saved, setSaved] = useState(false)
+  const endpoint = `${path}/details`
+
+  useEffect(() => {
+    let current = true
+    api<Hotel>(endpoint).then(
+      details => { if (current) setHotel(details) },
+      failure => { if (current) setError(failure.message) },
+    )
+    return () => { current = false }
+  }, [api, endpoint])
+
+  return <><h1>Hotel details</h1><Notice text={error} />
+    {saved && <p role="status">Hotel details saved.</p>}
+    {!hotel && !error && <p role="status">Loading hotel details…</p>}
+    {hotel && <section className="panel">
+      <ActionForm label="Save hotel details" action={async data => {
+        setSaved(false)
+        setHotel(await api<Hotel>(endpoint, 'PUT', hotelDetails(data)))
+        setSaved(true)
+        onSaved()
+      }}><HotelDetailsFields hotel={hotel} /></ActionForm>
+    </section>}
+  </>
+}
+
 export function Tenants({ api }: { api: Api }) {
   const { rows, error, reload } = useRecords<Hotel>(api, '/platform/properties')
   const [selected, setSelected] = useState<Hotel>()

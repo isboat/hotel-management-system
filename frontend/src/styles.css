@@ -53,6 +53,7 @@ header > div, .actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items
 .field-help { font-size: .8rem; color: var(--muted); line-height: 1.4; }
 .staff-name { color: var(--muted); font-size: .87rem; }
 .workspace main { max-width: 85rem; padding: clamp(1rem, 4vw, 2.5rem); display: grid; gap: 1rem; }
+.overview-hotel-name { font-size: clamp(2rem, 4.5vw, 3.5rem); font-weight: 800; overflow-wrap: anywhere; }
 .subtitle { margin-top: -.5rem; }
 .section-title { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .65rem; }
 .section-title p { margin-top: .3rem; }
