@@ -14,9 +14,11 @@ async function navigateTo(page: Page, name: string) {
 }
 
 test('front desk signs in and can navigate to room inventory', async ({ page }) => {
+  const login = Promise.withResolvers<void>()
   await page.route('**/api/v1/**', async route => {
     const path = new URL(route.request().url()).pathname
     if (path.endsWith('/login')) {
+      await login.promise
       await route.fulfill({ json: { id: 'front-desk', token: 'test-session', refreshToken: 'test-refresh', name: 'Front desk', isSystemAdmin: false } })
     } else if (path === '/api/v1/auth/properties') {
       await route.fulfill({ json: [{ id: 'hotel', name: 'Accra Lodge', role: 'FrontDesk' }] })
@@ -36,6 +38,8 @@ test('front desk signs in and can navigate to room inventory', async ({ page }) 
   await page.getByLabel('Email address').fill('frontdesk@example.test')
   await page.getByLabel('Password', { exact: true }).fill('example-password')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Signing in…', exact: true })).toBeDisabled()
+  login.resolve()
   await expect(page.getByRole('heading', { name: 'Accra Lodge', level: 1 })).toBeVisible()
   await navigateTo(page, 'Rooms')
   await expect(page.getByRole('heading', { name: 'Room 101' })).toBeVisible()
