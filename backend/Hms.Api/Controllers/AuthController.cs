@@ -24,7 +24,7 @@ public sealed class AuthController(HotelDatabase database, IPasswordHasher<Staff
         if (staff is null || hasher.VerifyHashedPassword(staff, staff.PasswordHash, input.Password) == PasswordVerificationResult.Failed)
             return Unauthorized();
         HttpContext.Items["AuditActor"] = staff.Id;
-        return Ok(await tokens.Issue(staff, DateTime.UtcNow.AddHours(8)));
+        return Ok(await tokens.Issue(staff, DateTime.UtcNow.AddHours(12)));
     }
 
     /// <summary>Consumes a refresh credential exactly once and preserves its original expiry.</summary>
