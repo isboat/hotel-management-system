@@ -41,7 +41,6 @@ export function Guests({ api, path }: { api: Api; path: string }) {
       <button className="text-button" onClick={() => setEditing(false)}>Cancel</button>
     </section>}
     {guest && !editing && <section className="panel"><h2>Guest Details</h2>
-      <hr />
       <p>Name: {guest.name}</p>
       <p>ID Number: {guest.idNumber ?? 'Not recorded'}</p>
       {guest.email && <p>Email: {guest.email}</p>}
@@ -50,7 +49,6 @@ export function Guests({ api, path }: { api: Api; path: string }) {
       <p>Marketing communications: {guest.marketingOptIn ? 'Agreed' : 'Not agreed'}</p>
       <br />
       <br />
-      <hr />
       <h3>Stay history</h3>
       {history.rows.length ? <ul>{history.rows.map(stay => <li key={stay.id}>
         <strong>Room {stay.roomNumber}</strong> · {stay.arrival} to {stay.departure} · {stay.status.replace(/([a-z])([A-Z])/g, '$1 $2')}
