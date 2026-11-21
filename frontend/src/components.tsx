@@ -54,8 +54,8 @@ export function Notice({ text }: { text: string }) {
   return text ? <p className="notice" role="alert"><CircleAlert size={17} />{text}</p> : null
 }
 
-export function ActionForm({ children, action, label }: {
-  children: ReactNode; action: (data: FormData) => Promise<void>; label: string
+export function ActionForm({ children, action, label, busyLabel = 'Saving…' }: {
+  children: ReactNode; action: (data: FormData) => Promise<void>; label: string; busyLabel?: string
 }) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -68,7 +68,7 @@ export function ActionForm({ children, action, label }: {
     catch (failure) { setError((failure as Error).message) }
     finally { setBusy(false) }
   }
-  return <form onSubmit={submit}><fieldset disabled={busy}>{children}<button type="submit">{busy ? 'Saving…' : label}</button></fieldset><Notice text={error} /></form>
+  return <form onSubmit={submit}><fieldset disabled={busy}>{children}<button type="submit">{busy ? busyLabel : label}</button></fieldset><Notice text={error} /></form>
 }
 
 export const field = (data: FormData, key: string) => String(data.get(key) ?? '')
@@ -90,7 +90,7 @@ export function SignIn({ onSession }: { onSession: (session: Session) => void })
       animate={{ opacity: 1, y: 0 }} transition={{ duration: .32, ease: 'easeOut' }}>
       <h2>{reset ? 'Reset password' : 'Sign in'}</h2>
       {success && <p role="status">Password updated. Sign in with your new password.</p>}
-      <ActionForm key={String(reset)} label={reset ? 'Update password' : 'Sign in'} action={async data => {
+      <ActionForm key={String(reset)} label={reset ? 'Update password' : 'Sign in'} busyLabel={reset ? 'Updating password…' : 'Signing in…'} action={async data => {
         const api = createApi()
         if (reset) {
           await api('/auth/reset', 'POST', { code: field(data, 'code'), password: field(data, 'password') })
