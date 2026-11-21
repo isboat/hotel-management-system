@@ -25,9 +25,14 @@ jobs:
           path: publish
           github-token: ${{ github.token }}
           run-id: ${{ github.event.workflow_run.id }}
+      - name: Verify API publish output
+        run: |
+          test -s publish/Hms.Api.dll
+          test -s publish/Hms.Api.runtimeconfig.json
+          test -s publish/Hms.Api.deps.json
       - uses: azure/webapps-deploy@v3
         with:
           app-name: 'premadesk-api'
           slot-name: 'Production'
-          package: .
+          package: publish
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_864A225D0FD4408D836FB29830EE1F33 }}
