@@ -7,7 +7,7 @@ import type { Hotel } from './types'
 export function Brand() {
   return <span className="brand">
     <span className="brand-mark"><Building2 size={20} aria-hidden="true" /></span>
-    <span>Staydesk<small>Hotel management</small></span>
+    <span>PremaDesk<small>Hotel management</small></span>
   </span>
 }
 
