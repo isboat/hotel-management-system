@@ -31,15 +31,16 @@ export function createApi(token = '', refreshToken = '', onRotate?: (tokens: Tok
             tokenVersion++
             onRotate?.(value)
           })
+          .catch(() => { throw new SessionUnauthorized('Your session expired. Sign in again.') })
           .finally(() => { pendingRefresh = undefined })
         await pendingRefresh
       }
       return send<T>(path, method, data, false)
     }
     if (!response.ok) {
-      const body = await response.text()
       if (response.status === 401) throw new SessionUnauthorized('Sign-in failed or your session expired.')
       if (response.status === 403) throw new Error('You do not have access to this action.')
+      const body = await response.text()
       if (body && !body.startsWith('{') && !body.startsWith('<')) throw new Error(body)
       throw new Error(`The request could not be completed (${response.status}).`)
     }

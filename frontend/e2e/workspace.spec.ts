@@ -339,3 +339,33 @@ test('property administrator can edit the hotel telephone and address', async ({
   await expect(page.getByLabel('Telephone')).toHaveValue('+233 24 555 1234')
   await expect(page.getByLabel('Address', { exact: true })).toHaveValue('18 High Street, Accra')
 })
+
+test('a rejected session returns to sign-in when renewal fails', async ({ page }) => {
+  let expired = false
+  await page.route('**/api/v1/**', async route => {
+    const path = new URL(route.request().url()).pathname
+    if (path.endsWith('/login')) {
+      await route.fulfill({ json: { id: 'staff', token: 'session', refreshToken: 'refresh', name: 'Tom', isSystemAdmin: true } })
+    } else if (path.endsWith('/auth/refresh')) {
+      await route.fulfill({ status: 503 })
+    } else if (expired) {
+      await route.fulfill({ status: 401 })
+    } else {
+      await route.fulfill({ json: [] })
+    }
+  })
+
+  await page.goto('/')
+  await page.getByLabel('Email address').fill('tom@example.test')
+  await page.getByLabel('Password', { exact: true }).fill('example-password')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Hotel tenants' })).toBeVisible()
+  expired = true
+
+  const menu = page.getByRole('button', { name: 'Open navigation' })
+  if (await menu.isVisible()) await menu.click()
+  await page.getByRole('button', { name: 'Audit log', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
+})
