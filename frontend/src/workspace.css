@@ -13,7 +13,7 @@
 .workspace-nav { display: grid; gap: .3rem; }
 .workspace-nav button { position: relative; justify-content: flex-start; gap: .72rem; padding: .6rem .75rem; background: transparent; color: var(--muted); font-size: .88rem; text-align: left; }
 .workspace-nav button:hover { background: var(--raised); }
-.workspace-nav button[aria-current] { color: #eee8ff; background: #272143; border-color: #433864; }
+.workspace-nav button[aria-current] { color: #eee8ff; background: #343052; border-color: #574b7a; }
 .workspace-nav button[aria-current] svg { color: var(--accent); }
 .nav-marker { margin-left: auto; width: .36rem; height: .36rem; border-radius: 50%; background: #b39eff; box-shadow: 0 0 9px #aa85ff; }
 
@@ -22,18 +22,18 @@
   position: fixed; z-index: -1; inset: 0 0 0 var(--sidebar-width); content: '';
   pointer-events: none;
   background:
-    linear-gradient(90deg, #10111ee8 0%, #1413228a 56%, #1c163e32 100%),
-    linear-gradient(180deg, #0d0e1733, #0d0e17cc 100%),
+    linear-gradient(90deg, #191c31d4 0%, #22243c6e 56%, #251f471c 100%),
+    linear-gradient(180deg, #1c1f320f, #171a2baf 100%),
     var(--page-photo) 65% center / cover no-repeat;
 }
 .workspace .panel {
-  background: #171825eb;
-  border-color: #414058;
+  background: color-mix(in srgb, var(--surface) 93%, transparent);
+  border-color: var(--border-strong);
   backdrop-filter: blur(12px);
 }
-.workspace .empty { background: #131423dc; }
+.workspace .empty { background: color-mix(in srgb, var(--surface) 92%, transparent); }
 .workspace > main > .fields, .workspace > main > .search {
-  background: #171825ed;
+  background: color-mix(in srgb, var(--surface) 95%, transparent);
   border: 1px solid var(--border);
   padding: var(--space-4);
   border-radius: var(--radius-lg);
@@ -41,7 +41,7 @@
 .workspace-header {
   min-height: 68px; display: flex; align-items: center; justify-content: space-between; gap: .75rem;
   padding: .65rem clamp(1rem, 3vw, 2.4rem); border-bottom: 1px solid var(--border);
-  background: #11121eea; backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--sidebar) 94%, transparent); backdrop-filter: blur(14px);
 }
 .header-location, .header-account { display: flex; align-items: center; gap: .7rem; min-width: 0; }
 .header-location { font-size: .88rem; color: var(--muted); }
@@ -100,8 +100,8 @@
 .sign-in {
   min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
   background:
-    linear-gradient(100deg, #18112475, #16112670 53%, #0d0e17da),
-    linear-gradient(0deg, #100c20f2, transparent 70%),
+    linear-gradient(100deg, #211a3063, #211b3352 53%, #171a2bbd),
+    linear-gradient(0deg, #1c172bd4, transparent 70%),
     var(--canvas) url('/heroes/sign-in.webp') center / cover no-repeat;
 }
 .welcome {
@@ -112,7 +112,7 @@
 .welcome p { margin-top: var(--space-3); max-width: 40ch; color: #e3dcef; }
 .sign-in-form {
   width: min(100% - 2rem, 28rem); justify-self: center; align-self: center; padding: clamp(1.25rem, 3vw, 2rem);
-  background: #141524ef; border: 1px solid #4a415f; border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--surface) 94%, transparent); border: 1px solid var(--border-strong); border-radius: var(--radius-xl);
   box-shadow: 0 24px 65px -18px #060611aa; backdrop-filter: blur(16px);
 }
 .sign-in-form h2 { font-size: 2rem; }
@@ -137,7 +137,7 @@
   .overview-hero { min-height: 190px; }
   .workspace::before {
     background:
-      linear-gradient(165deg, #10111ead, #131321c9 58%, #0d0e17e6),
+      linear-gradient(165deg, #1a1d348f, #23243ab8 58%, #171a2bcc),
       var(--page-photo) 68% center / cover no-repeat;
   }
   .page-heading { min-height: 128px; }

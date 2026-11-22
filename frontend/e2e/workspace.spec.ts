@@ -348,7 +348,7 @@ test('a rejected session returns to sign-in when renewal fails', async ({ page }
       await route.fulfill({ json: { id: 'staff', token: 'session', refreshToken: 'refresh', name: 'Tom', isSystemAdmin: true } })
     } else if (path.endsWith('/auth/refresh')) {
       await route.fulfill({ status: 503 })
-    } else if (expired) {
+    } else if (expired && path.endsWith('/platform/audit')) {
       await route.fulfill({ status: 401 })
     } else {
       await route.fulfill({ json: [] })

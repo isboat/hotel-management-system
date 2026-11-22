@@ -5,17 +5,17 @@
   font-family: Inter, "Segoe UI", system-ui, sans-serif;
   font-synthesis: none;
   color: #f4f4fc;
-  background: #0d0e17;
-  --canvas: #0d0e17;
-  --sidebar: #11121d;
-  --surface: #161724;
-  --raised: #1c1d2c;
-  --input: #121320;
-  --border: #2c2e42;
-  --border-strong: #43455f;
+  background: #161826;
+  --canvas: #161826;
+  --sidebar: #1b1d2e;
+  --surface: #232536;
+  --raised: #2a2d42;
+  --input: #1d2031;
+  --border: #3b3e55;
+  --border-strong: #555973;
   --text: #f4f4fc;
-  --muted: #a9aac3;
-  --accent: #b5a7ff;
+  --muted: #c0c3d8;
+  --accent: #c5baff;
   --primary: #5942d1;
   --accent-gradient: linear-gradient(112deg, #4f46c9, #713dd1);
   --danger: #fca6b4;
@@ -75,7 +75,7 @@ input, select, textarea {
   transition: border-color var(--speed), box-shadow var(--speed);
 }
 textarea { resize: vertical; }
-input::placeholder, textarea::placeholder { color: #9294ae; }
+input::placeholder, textarea::placeholder { color: #aeb2ca; }
 input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px #9d80ff24; }
 input[type="checkbox"] { accent-color: var(--primary); }
 label { display: grid; gap: .42rem; font-size: .87rem; font-weight: 650; min-width: 0; }
