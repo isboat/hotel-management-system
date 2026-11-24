@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="PremaDesk brings reservations, guest records, housekeeping, cash shifts, and reporting together for independent hotels and guesthouses in Ghana.">
+  <meta name="theme-color" content="#102a27">
+  <title>PremaDesk | Hotel management for Ghana</title>
+  <link rel="icon" type="image/svg+xml" href="assets/mark.svg">
+  <link rel="preload" as="image" href="assets/lobby.webp">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="site-config.js"></script>
+  <script defer src="site.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="header">
+    <div class="wrap navbar">
+      <a class="brand" href="#home"><img alt="" width="36" height="36" src="assets/mark.svg">PremaDesk</a>
+      <button type="button" class="menu" aria-controls="site-nav" aria-expanded="false" hidden>Menu</button>
+      <nav id="site-nav" aria-label="Main navigation">
+        <a href="#home">Home</a><a href="#about">About us</a><a href="#services">Services</a><a href="#why-us">Why us</a><a href="#faq">FAQ</a><a class="nav-contact" href="#contact">Contact us <span aria-hidden="true">→</span></a>
+      </nav>
+    </div>
+  </header>
+  <main id="main">
+    <section class="hero" id="home" aria-labelledby="home-title">
+      <img class="hero-photo" src="assets/lobby.webp" alt="" fetchpriority="high">
+      <div class="wrap hero-copy">
+        <p class="eyebrow">Hotel management software for Ghana</p>
+        <h1 id="home-title">Run your hotel<br>from one place.</h1>
+        <p>Give your team one place to manage reservations, ready rooms, guest stays, and cash. Built for independent hotels and guesthouses.</p>
+        <div class="actions"><a class="button primary" href="#contact">Request a demo <span aria-hidden="true">→</span></a><a class="button quiet" href="#services">Explore features <span aria-hidden="true">↓</span></a></div>
+      </div>
+    </section>
+
+    <section class="wrap split section" id="about" aria-labelledby="about-title">
+      <img class="about-photo" src="assets/property.webp" alt="A welcoming hotel reception with warm lighting" loading="lazy" decoding="async">
+      <div>
+        <p class="eyebrow">About us</p>
+        <h2 id="about-title">Built around the way independent hotels work.</h2>
+        <p>PremaDesk is a hotel management platform for small and medium-sized hotels and guesthouses in Ghana. It brings front desk, housekeeping, and management into the same workspace so the next shift can pick up where the last one left off.</p>
+        <a class="text-link" href="#why-us">Why choose PremaDesk <span aria-hidden="true">→</span></a>
+      </div>
+    </section>
+
+    <section class="services section" id="services" aria-labelledby="services-title">
+      <div class="wrap">
+        <p class="eyebrow">Services</p>
+        <h2 id="services-title">From the first booking to the final cash count.</h2>
+        <div class="cards">
+          <article><img src="assets/reservations.webp" alt="" loading="lazy"><div><h3>Reservations and guests</h3><p>Check availability, book rooms, check guests in and out, and look up stay history when a guest returns.</p></div></article>
+          <article><img src="assets/rooms.webp" alt="" loading="lazy"><div><h3>Rooms and housekeeping</h3><p>See which rooms are ready, take rooms out of service, and record when maintenance issues are fixed.</p></div></article>
+          <article><img src="assets/cash.webp" alt="" loading="lazy"><div><h3>Cash desk and reporting</h3><p>Record cash payments and refunds in Ghana cedis, issue receipts, reconcile shifts, and review occupancy and room revenue.</p></div></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="why section" id="why-us" aria-labelledby="why-title">
+      <div class="wrap why-grid">
+        <div><p class="eyebrow">Why us</p><h2 id="why-title">A clearer view of your property.</h2><a class="button primary" href="#contact">See it in action <span aria-hidden="true">→</span></a></div>
+        <dl>
+          <div><dt>Made for cash operations</dt><dd>Compare counted and expected cash at shift close so you know when to follow up.</dd></div>
+          <div><dt>Access that fits each role</dt><dd>Give front desk, housekeeping, and managers access based on what they need to do.</dd></div>
+          <div><dt>Works across devices</dt><dd>Open PremaDesk in a browser on a phone, tablet, or laptop.</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="wrap section faq" id="faq" aria-labelledby="faq-title">
+      <div><p class="eyebrow">FAQ</p><h2 id="faq-title">Frequently asked questions</h2></div>
+      <div>
+        <details><summary>Who is PremaDesk for?</summary><p>Independent hotels and guesthouses in Ghana that want to manage day-to-day operations in one place.</p></details>
+        <details><summary>Can we record cash payments in Ghana cedis?</summary><p>Yes. Your team can record cash payments and refunds in Ghana cedis, print receipts, and reconcile an opening float against the actual cash count at shift close.</p></details>
+        <details><summary>Do staff need to install an app?</summary><p>PremaDesk is a web application. Staff sign in through a browser on a phone, tablet, or laptop.</p></details>
+        <details><summary>Can I see how the hotel is performing?</summary><p>Managers can run a date-range report with room nights booked, occupancy, room revenue, average daily rate, and revenue per available room.</p></details>
+        <details><summary>How do I get started?</summary><p>Use the demo request below to tell us about your property and what you’d like to see.</p></details>
+      </div>
+    </section>
+
+    <section class="contact section" id="contact" aria-labelledby="contact-title">
+      <div class="wrap contact-grid">
+        <div><p class="eyebrow">Contact us</p><h2 id="contact-title">See PremaDesk at work.</h2><p>Tell us a little about your property and what you’d like to see in a demo.</p><p id="contact-email" hidden></p></div>
+        <form id="demo-form">
+          <div class="form-row"><label>Your name<input name="name" autocomplete="name" required maxlength="100"></label><label>Hotel or guesthouse<input name="property" autocomplete="organization" required maxlength="150"></label></div>
+          <label>Work email<input name="email" type="email" autocomplete="email" required maxlength="200"></label>
+          <label>What would you like to cover? <span>(optional)</span><textarea name="message" rows="3" maxlength="700"></textarea></label>
+          <button class="button primary" id="request-button" type="submit" disabled>Prepare demo request <span aria-hidden="true">→</span></button>
+          <p id="form-help">The form prepares a draft without submitting it to a server.</p>
+          <p id="form-status" role="status"></p>
+          <noscript><p>Enable JavaScript to prepare your demo request.</p></noscript>
+        </form>
+      </div>
+    </section>
+  </main>
+  <footer><div class="wrap"><a class="brand" href="#home"><img alt="" width="32" height="32" src="assets/mark.svg">PremaDesk</a><a href="#home">Back to top ↑</a></div></footer>
+</body>
+</html>
