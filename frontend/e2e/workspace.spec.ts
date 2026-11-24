@@ -308,36 +308,53 @@ test('staff confirm reservation creation and cancellation in the overlay', async
   expect(cancellations).toEqual([{ status: 'Cancelled' }])
 })
 
-test('property administrator can edit the hotel telephone and address', async ({ page }) => {
+test('only system administrators can edit hotel details', async ({ page }) => {
   let hotel = { id: 'hotel', name: 'Accra Lodge', role: 'Administrator', telephone: '024 000 0000', address: 'Old Address' }
   await page.route('**/api/v1/**', async route => {
     const request = route.request()
     const path = new URL(request.url()).pathname
     if (path.endsWith('/login')) {
-      await route.fulfill({ json: { id: 'staff', token: 'session', refreshToken: 'refresh', name: 'Tom', isSystemAdmin: false } })
-    } else if (path.endsWith('/auth/properties')) {
+      const isSystemAdmin = request.postDataJSON().email === 'system@example.test'
+      await route.fulfill({ json: { id: 'staff', token: 'session', refreshToken: 'refresh', name: 'Tom', isSystemAdmin } })
+    } else if (path.endsWith('/auth/properties') || path.endsWith('/platform/properties')) {
       await route.fulfill({ json: [hotel] })
-    } else if (path.endsWith('/properties/hotel/details')) {
-      if (request.method() === 'PUT') hotel = { ...hotel, ...request.postDataJSON() }
-      await route.fulfill({ json: hotel })
+    } else if (path.endsWith('/platform/properties/hotel') && request.method() === 'PUT') {
+      hotel = { ...hotel, ...request.postDataJSON() }
+      await route.fulfill({ status: 204 })
     } else {
       await route.fulfill({ json: [] })
     }
   })
+
+  async function signIn(email: string) {
+    await page.getByLabel('Email address').fill(email)
+    await page.getByLabel('Password', { exact: true }).fill('example-password')
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  }
+
   await page.goto('/')
-  await page.getByLabel('Email address').fill('admin@example.test')
-  await page.getByLabel('Password', { exact: true }).fill('example-password')
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await navigateTo(page, 'Hotel details')
-  await expect(page.getByLabel('Telephone')).toHaveValue('024 000 0000')
-  await page.getByLabel('Telephone').fill('+233 24 555 1234')
-  await page.getByLabel('Address', { exact: true }).fill('18 High Street, Accra')
-  await page.getByRole('button', { name: 'Save hotel details' }).click()
-  await expect(page.getByText('Hotel details saved.')).toBeVisible()
-  await navigateTo(page, 'Overview')
-  await navigateTo(page, 'Hotel details')
-  await expect(page.getByLabel('Telephone')).toHaveValue('+233 24 555 1234')
-  await expect(page.getByLabel('Address', { exact: true })).toHaveValue('18 High Street, Accra')
+  await signIn('property@example.test')
+  await expect(page.getByRole('heading', { name: hotel.name, level: 1 })).toBeVisible()
+  const menu = page.getByRole('button', { name: 'Open navigation' })
+  if (await menu.isVisible()) await menu.click()
+  const navigation = page.getByRole('navigation', { name: 'Main navigation' })
+  await expect(navigation.getByRole('button', { name: 'Audit log' })).toBeVisible()
+  await expect(navigation.getByRole('button', { name: 'Hotel details' })).toHaveCount(0)
+  await expect(navigation.getByRole('button', { name: 'Tenants' })).toHaveCount(0)
+  if (await page.getByRole('dialog', { name: 'Workspace navigation' }).isVisible()) await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: 'Sign out' }).click()
+
+  await signIn('system@example.test')
+  await expect(page.getByRole('heading', { name: 'Hotel tenants' })).toBeVisible()
+  const tenant = page.getByRole('article').filter({ hasText: hotel.name })
+  await tenant.getByRole('button', { name: 'Edit', exact: true }).click()
+  const editor = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Edit tenant', exact: true }) })
+  await expect(editor.getByLabel('Telephone')).toHaveValue('024 000 0000')
+  await editor.getByLabel('Telephone').fill('+233 24 555 1234')
+  await editor.getByLabel('Address', { exact: true }).fill('18 High Street, Accra')
+  await editor.getByRole('button', { name: 'Save tenant' }).click()
+  await expect(tenant.getByText('Telephone +233 24 555 1234')).toBeVisible()
+  await expect(tenant.getByText('18 High Street, Accra')).toBeVisible()
 })
 
 test('a rejected session returns to sign-in when renewal fails', async ({ page }) => {
@@ -348,7 +365,7 @@ test('a rejected session returns to sign-in when renewal fails', async ({ page }
       await route.fulfill({ json: { id: 'staff', token: 'session', refreshToken: 'refresh', name: 'Tom', isSystemAdmin: true } })
     } else if (path.endsWith('/auth/refresh')) {
       await route.fulfill({ status: 503 })
-    } else if (expired) {
+    } else if (expired && path.endsWith('/platform/audit')) {
       await route.fulfill({ status: 401 })
     } else {
       await route.fulfill({ json: [] })
@@ -366,6 +383,45 @@ test('a rejected session returns to sign-in when renewal fails', async ({ page }
   if (await menu.isVisible()) await menu.click()
   await page.getByRole('button', { name: 'Audit log', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
+})
+
+test('a signed-in user can change their password and return to sign-in', async ({ page }) => {
+  const changes: unknown[] = []
+  await page.route('**/api/v1/**', async route => {
+    const request = route.request()
+    const path = new URL(request.url()).pathname
+    if (path.endsWith('/login')) {
+      await route.fulfill({ json: { id: 'staff', token: 'session', refreshToken: 'refresh', name: 'Tom', isSystemAdmin: true } })
+    } else if (path.endsWith('/change-password')) {
+      changes.push(request.postDataJSON())
+      await route.fulfill({ status: 204 })
+    } else {
+      await route.fulfill({ json: [] })
+    }
+  })
+
+  await page.goto('/')
+  await page.getByLabel('Email address').fill('tom@example.test')
+  await page.getByLabel('Password', { exact: true }).fill('example-password')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Hotel tenants' })).toBeVisible()
+  const menu = page.getByRole('button', { name: 'Open navigation' })
+  if (await menu.isVisible()) await menu.click()
+  await page.getByRole('button', { name: 'Change password', exact: true }).click()
+  await page.getByLabel('Current password', { exact: true }).fill('example-password')
+  await page.getByLabel('New password', { exact: true }).fill('changed-password')
+  await page.getByLabel('Confirm new password').fill('mismatched-password')
+  await page.getByRole('button', { name: 'Update password' }).click()
+  await expect(page.getByRole('alert')).toContainText('The new passwords do not match.')
+  expect(changes).toHaveLength(0)
+
+  await page.getByLabel('Confirm new password').fill('changed-password')
+  await page.getByRole('button', { name: 'Update password' }).click()
+  await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
+  await expect(page.getByRole('status')).toContainText('Password updated.')
+  expect(changes).toEqual([{ currentPassword: 'example-password', newPassword: 'changed-password' }])
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
 })

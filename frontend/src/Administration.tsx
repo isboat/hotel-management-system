@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BedDouble, Building2, CalendarCheck, ChartNoAxesCombined, ClipboardList, Coins, Percent, Settings2, TrendingUp, Users } from 'lucide-react'
+import { BedDouble, Building2, CalendarCheck, ChartNoAxesCombined, ClipboardList, Coins, Percent, TrendingUp, Users } from 'lucide-react'
 import { currency, today } from './api'
 import type { Api } from './api'
 import { ActionForm, DescribedField, field, Notice, PageHeading, useRecords } from './components'
@@ -77,35 +77,6 @@ function HotelDetailsFields({ hotel }: { hotel?: Hotel }) {
     </div>
     <DescribedField label="Description" description="Optional. Add a short summary to help administrators identify this property."><textarea name="description" rows={3} maxLength={1000} defaultValue={hotel?.description ?? ''} /></DescribedField>
     <DescribedField label="Address" description="Optional. Include the street address, neighbourhood, and town or city."><textarea name="address" rows={3} maxLength={500} defaultValue={hotel?.address ?? ''} /></DescribedField>
-  </>
-}
-
-export function HotelDetails({ api, path, onSaved }: { api: Api; path: string; onSaved: () => void }) {
-  const [hotel, setHotel] = useState<Hotel>()
-  const [error, setError] = useState('')
-  const [saved, setSaved] = useState(false)
-  const endpoint = `${path}/details`
-
-  useEffect(() => {
-    let current = true
-    api<Hotel>(endpoint).then(
-      details => { if (current) setHotel(details) },
-      failure => { if (current) setError(failure.message) },
-    )
-    return () => { current = false }
-  }, [api, endpoint])
-
-  return <><PageHeading title="Hotel details" icon={Settings2} /><Notice text={error} />
-    {saved && <p role="status">Hotel details saved.</p>}
-    {!hotel && !error && <p role="status">Loading hotel details…</p>}
-    {hotel && <section className="panel">
-      <ActionForm label="Save hotel details" action={async data => {
-        setSaved(false)
-        setHotel(await api<Hotel>(endpoint, 'PUT', hotelDetails(data)))
-        setSaved(true)
-        onSaved()
-      }}><HotelDetailsFields hotel={hotel} /></ActionForm>
-    </section>}
   </>
 }
 

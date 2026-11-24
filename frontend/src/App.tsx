@@ -1,10 +1,11 @@
 import type { CSSProperties } from 'react'
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { BedDouble, Building2, CalendarDays, ChartNoAxesCombined, ClipboardList, ContactRound, LayoutDashboard, LogOut, Menu, Users, Wallet } from 'lucide-react'
+import { BedDouble, Building2, CalendarDays, ChartNoAxesCombined, ClipboardList, ContactRound, KeyRound, LayoutDashboard, LogOut, Menu, Users, Wallet } from 'lucide-react'
 import { domAnimation, LazyMotion, MotionConfig, m, useReducedMotion } from 'framer-motion'
 import { createApi } from './api'
-import { AuditLog, HotelDetails, Reports, StaffDirectory, Tenants } from './Administration'
+import { AuditLog, Reports, StaffDirectory, Tenants } from './Administration'
 import { CashDesk } from './CashDesk'
+import { ChangePassword } from './ChangePassword'
 import { Guests } from './Guests'
 import { Notice, PageHeading, SignIn, useRecords } from './components'
 import { Reservations } from './Reservations'
@@ -17,8 +18,10 @@ import type { Hotel, Session } from './types'
 export default function App() {
   const [session, setSession] = useState(readSession)
   const activeSession = useRef(session)
+  const [passwordChanged, setPasswordChanged] = useState(false)
 
   const changeSession = useCallback((next?: Session) => {
+    if (next) setPasswordChanged(false)
     activeSession.current = next
     saveSession(next)
     setSession(next)
@@ -28,14 +31,17 @@ export default function App() {
     if (activeSession.current === previous) saveSession({ ...previous, ...tokens })
   }, [])
 
-  const endSession = useCallback((previous: Session) => {
-    if (activeSession.current === previous) changeSession()
+  const endSession = useCallback((previous: Session, changedPassword = false) => {
+    if (activeSession.current === previous) {
+      setPasswordChanged(changedPassword)
+      changeSession()
+    }
   }, [changeSession])
 
   return <MotionConfig reducedMotion="user">
     <LazyMotion features={domAnimation} strict>
       {session ? <Workspace session={session} onRotate={rotateSession} onLogout={endSession} />
-      : <SignIn onSession={changeSession} />}
+      : <SignIn onSession={changeSession} passwordChanged={passwordChanged} />}
     </LazyMotion>
   </MotionConfig>
 }
@@ -43,11 +49,11 @@ export default function App() {
 function Workspace({ session, onRotate, onLogout }: {
   session: Session
   onRotate: (session: Session, tokens: Pick<Session, 'token' | 'refreshToken'>) => void
-  onLogout: (session: Session) => void
+  onLogout: (session: Session, changedPassword?: boolean) => void
 }) {
   const api = useMemo(() => createApi(session.token, session.refreshToken, tokens => onRotate(session, tokens),
     () => onLogout(session)), [session, onRotate, onLogout])
-  const { rows: hotels, error, reload: reloadHotels } = useRecords<Hotel>(api, session.isSystemAdmin ? null : '/auth/properties')
+  const { rows: hotels, error } = useRecords<Hotel>(api, session.isSystemAdmin ? null : '/auth/properties')
   const [hotelId, setHotelId] = useState('')
   const [page, setPage] = useState(session.isSystemAdmin ? 'Tenants' : 'Overview')
   const [signingOut, setSigningOut] = useState(false)
@@ -65,12 +71,13 @@ function Workspace({ session, onRotate, onLogout }: {
       { name: 'Overview', icon: LayoutDashboard }, { name: 'Rooms', icon: BedDouble },
       ...(frontDesk ? [{ name: 'Reservations', icon: CalendarDays }, { name: 'Guests', icon: ContactRound }, { name: 'Cash desk', icon: Wallet }] : []),
       ...(manager ? [{ name: 'Staff', icon: Users }, { name: 'Reports', icon: ChartNoAxesCombined }] : []),
-      ...(role === 'Administrator' ? [{ name: 'Hotel details', icon: Building2 }, { name: 'Audit log', icon: ClipboardList }] : []),
+      ...(role === 'Administrator' ? [{ name: 'Audit log', icon: ClipboardList }] : []),
     ]
-  const activePage = !session.isSystemAdmin && !hotel ? 'Properties'
+  items.push({ name: 'Change password', icon: KeyRound })
+  const activePage = page === 'Change password' ? page : !session.isSystemAdmin && !hotel ? 'Properties'
     : items.some(item => item.name === page) ? page : 'Overview'
   const photo = activePage === 'Overview' ? '/hotel-lobby.webp'
-    : `/heroes/${activePage.toLowerCase().replaceAll(' ', '-')}.webp`
+    : activePage === 'Change password' ? '/heroes/sign-in.webp' : `/heroes/${activePage.toLowerCase().replaceAll(' ', '-')}.webp`
   const navigation = {
     hotels, hotel, page, items,
     onNavigate: (next: string) => { setPage(next); closeDrawer() },
@@ -104,7 +111,8 @@ function Workspace({ session, onRotate, onLogout }: {
         initial={reducedMotion ? false : { opacity: .7, y: 6 }} animate={{ opacity: 1, y: 0 }}
         transition={{ duration: .22, ease: 'easeOut' }}>
         <Notice text={error} />
-        {session.isSystemAdmin ? (page === 'Tenants' ? <Tenants api={api} /> : <AuditLog api={api} path="/platform" />)
+        {page === 'Change password' ? <ChangePassword api={api} onPasswordChanged={() => onLogout(session, true)} />
+          : session.isSystemAdmin ? (page === 'Tenants' ? <Tenants api={api} /> : <AuditLog api={api} path="/platform" />)
           : !hotel ? <><PageHeading title="Properties" icon={Building2} /><p className="empty">No active property available.</p></>
           : page === 'Rooms' ? <Rooms api={api} path={path} role={role} />
           : page === 'Reservations' && frontDesk ? <Reservations api={api} path={path} canRefund={manager} property={hotel.name} />
@@ -112,7 +120,6 @@ function Workspace({ session, onRotate, onLogout }: {
           : page === 'Guests' && frontDesk ? <Guests api={api} path={path} />
           : page === 'Staff' && manager ? <StaffDirectory api={api} path={path} role={role} />
           : page === 'Reports' && manager ? <Reports api={api} path={path} />
-          : page === 'Hotel details' && role === 'Administrator' ? <HotelDetails api={api} path={path} onSaved={reloadHotels} />
           : page === 'Audit log' && role === 'Administrator' ? <AuditLog api={api} path={path} />
           : <Overview api={api} path={path} property={hotel.name} frontDesk={frontDesk} navigate={setPage} />}
       </m.main>
