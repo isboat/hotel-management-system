@@ -1,12 +1,12 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { Building2, ChevronDown, X } from 'lucide-react'
+import { ChevronDown, X } from 'lucide-react'
 import { m, useReducedMotion } from 'framer-motion'
 import type { Hotel } from './types'
 
 export function Brand() {
   return <span className="brand">
-    <span className="brand-mark"><Building2 size={20} aria-hidden="true" /></span>
+    <span className="brand-mark"><img src={`${import.meta.env.BASE_URL}premadesk-mark.svg`} alt="" width={28} height={28} /></span>
     <span>PremaDesk<small>Hotel management</small></span>
   </span>
 }

@@ -26,6 +26,7 @@ button, input, textarea { font: inherit; }
 .header { background: #f2f8fe; color: var(--navy); border-bottom: 1px solid var(--rule); position: relative; z-index: 2; }
 .navbar, footer .wrap { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .brand { display: inline-flex; gap: .65rem; align-items: center; text-decoration: none; font-weight: 750; font-size: 1.2rem; white-space: nowrap; }
+footer .brand img { background: #eef7ff; border-radius: .45rem; padding: .25rem; }
 nav { display: flex; gap: clamp(.75rem, 2vw, 1.5rem); align-items: center; flex-wrap: wrap; }
 nav a { text-decoration: none; font-size: .92rem; padding-block: .4rem; }
 nav a:hover, footer a:hover { text-decoration: underline; }
