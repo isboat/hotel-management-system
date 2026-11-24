@@ -1,0 +1,36 @@
+1
+00:00:00,240 --> 00:00:07,275
+When you own a hotel, you need to know where the cash went,
+which rooms need attention, and how well they're booking.
+
+2
+00:00:08,360 --> 00:00:12,143
+PremaDesk lets you compare what was counted at the till with
+what
+
+3
+00:00:12,143 --> 00:00:16,055
+the system expected, so you know which shifts to follow up on.
+
+4
+00:00:16,640 --> 00:00:22,595
+When a repair is finished, staff can mark it fixed. You can
+still see the issue and its fixed date.
+
+5
+00:00:23,200 --> 00:00:29,531
+Run an occupancy report for any date range to check how much of
+your room inventory was booked.
+
+6
+00:00:30,120 --> 00:00:37,904
+See room revenue and average daily rate alongside occupancy, so
+you can make more informed pricing decisions.
+
+7
+00:00:38,480 --> 00:00:42,230
+Spend less time piecing together updates from different people.
+
+8
+00:00:42,230 --> 00:00:46,111
+Request a PremaDesk demo for your hotel or guesthouse.

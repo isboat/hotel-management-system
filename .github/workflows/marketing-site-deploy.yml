@@ -1,0 +1,47 @@
+name: Marketing site deploy to Azure Static Web Apps
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'marketing-site/**'
+      - '.github/workflows/marketing-site-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marketing-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: marketing-production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare static website
+        env:
+          CONTACT_EMAIL: ${{ vars.MARKETING_CONTACT_EMAIL }}
+        run: |
+          mkdir marketing-dist
+          cp -R marketing-site/assets marketing-site/index.html marketing-site/styles.css marketing-site/site.js marketing-dist/
+          node <<'JS'
+          const fs = require('node:fs');
+          const email = (process.env.CONTACT_EMAIL || '').trim();
+          if (!/^[\w.+-]+@[a-z\d.-]+\.[a-z]{2,}$/i.test(email)) {
+            throw new Error('Set MARKETING_CONTACT_EMAIL to the public demo-request email address.');
+          }
+          fs.writeFileSync('marketing-dist/site-config.js', 'window.PREMADESK_CONTACT_EMAIL = ' + JSON.stringify(email) + ';\n');
+          JS
+      - name: Deploy marketing site
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.MARKETING_AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: marketing-dist
+          output_location: ''
+          skip_app_build: true
+          skip_api_build: true

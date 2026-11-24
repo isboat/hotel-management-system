@@ -1,0 +1,157 @@
+1
+00:00:00,345 --> 00:00:05,651
+Welcome to PremaDesk. This walkthrough shows how a
+receptionist can manage bookings,
+
+2
+00:00:05,651 --> 00:00:07,955
+guest records, and cash
+payments.
+
+3
+00:00:08,807 --> 00:00:13,613
+Enter your email and password, then select Sign in. If you
+work at more than one
+
+4
+00:00:13,613 --> 00:00:16,356
+hotel, choose the right one from
+Property.
+
+5
+00:00:17,468 --> 00:00:24,617
+Start on Overview to see what needs attention today. Check
+the arrivals, departures, and rooms ready for guests.
+
+6
+00:00:25,153 --> 00:00:31,236
+Select View reservations to open the booking list, or Room
+inventory to check individual rooms.
+
+7
+00:00:31,908 --> 00:00:37,525
+On Rooms, use Find a room to search by number or room type.
+Check the rate, capacity,
+
+8
+00:00:37,525 --> 00:00:40,850
+and housekeeping status before a
+guest arrives.
+
+9
+00:00:41,644 --> 00:00:47,356
+Before recording a cash payment, open Cash desk. The opening
+float is the cash already
+
+10
+00:00:47,356 --> 00:00:50,896
+in the till, including money set
+aside for change.
+
+11
+00:00:51,275 --> 00:00:55,266
+Enter the opening float in Ghana cedis and select Open
+shift.
+
+12
+00:00:56,240 --> 00:01:03,128
+To book a stay, select New reservation, enter the arrival
+and departure dates, then select Find rooms.
+
+13
+00:01:04,169 --> 00:01:10,105
+Search for an existing guest profile, or enter a name to
+create a new profile with the booking.
+
+14
+00:01:10,592 --> 00:01:17,465
+Choose an available room, select Confirm reservation, and
+check the details in the pop-up before confirming.
+
+15
+00:01:18,289 --> 00:01:23,850
+To find a booking later, search by guest name or filter by
+status. When the guest arrives
+
+16
+00:01:23,850 --> 00:01:26,506
+and the room is ready, select
+Check in.
+
+17
+00:01:27,315 --> 00:01:34,043
+If a booking is cancelled, select Cancel booking and
+confirm. A booking with a cash payment still on its folio
+
+18
+00:01:34,043 --> 00:01:36,893
+must be settled before it can be cancelled.
+
+19
+00:01:37,365 --> 00:01:41,756
+Select Folio on the booking to review the guest’s charges
+and balance.
+
+20
+00:01:42,072 --> 00:01:48,836
+To add an extra, such as laundry, enter the description and
+amount, then select Post charge and confirm.
+
+21
+00:01:49,682 --> 00:01:56,248
+Enter how much to apply to the balance and how much cash the
+guest handed you. Select Record cash payment.
+
+22
+00:01:56,561 --> 00:02:01,001
+Check the change shown in the pop-up and confirm. You can
+then print the receipt.
+
+23
+00:02:01,984 --> 00:02:06,228
+Once the balance is paid, select Check out on the booking
+when the guest leaves.
+
+24
+00:02:07,483 --> 00:02:12,513
+Open Guests to find a returning guest, or select Add guest
+to create a profile.
+
+25
+00:02:13,255 --> 00:02:18,870
+Use View details to see their contact information and stay
+history, including room numbers.
+
+26
+00:02:20,150 --> 00:02:24,439
+Choose Edit to update a phone number or note a preference
+for a future stay.
+
+27
+00:02:25,742 --> 00:02:31,311
+Return to Cash desk, count the cash in the till, and enter
+the total under Cash counted.
+
+28
+00:02:32,398 --> 00:02:38,497
+Select Close shift. Compare the counted amount with the
+expected amount to see whether there’s a difference.
+
+29
+00:02:38,801 --> 00:02:44,152
+To change your password, open Change password. Enter your
+current password and confirm a
+
+30
+00:02:44,152 --> 00:02:46,804
+new one with at least twelve
+characters.
+
+31
+00:02:47,711 --> 00:02:51,703
+Select Update password, then sign in again with the new
+password.
+
+32
+00:02:52,588 --> 00:02:55,597
+When you finish using PremaDesk, select Sign out.

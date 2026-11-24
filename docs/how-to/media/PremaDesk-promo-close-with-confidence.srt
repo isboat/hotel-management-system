@@ -1,0 +1,33 @@
+1
+00:00:00,240 --> 00:00:05,444
+At the end of a busy day, you want to know what came into the
+till and how your rooms performed.
+
+2
+00:00:06,520 --> 00:00:12,730
+PremaDesk records the opening float in Ghana cedis, so there's a
+clear starting point for each cash shift.
+
+3
+00:00:13,360 --> 00:00:19,437
+If you return cash to a guest, record the refund against the
+original receipt and note why it was made.
+
+4
+00:00:21,440 --> 00:00:24,614
+At closing, compare what was counted with what the system
+
+5
+00:00:24,614 --> 00:00:28,236
+expected. If there's a difference, you know which shift to
+review.
+
+6
+00:00:28,840 --> 00:00:34,517
+Use occupancy and room revenue to understand demand and guide
+your pricing decisions.
+
+7
+00:00:36,840 --> 00:00:42,837
+Give yourself a clearer view of your business. Request a
+PremaDesk demo for your hotel or guesthouse.

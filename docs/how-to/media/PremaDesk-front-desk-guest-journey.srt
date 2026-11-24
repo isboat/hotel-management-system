@@ -1,0 +1,76 @@
+1
+00:00:00,240 --> 00:00:05,953
+Let's follow Maya Mensah through a one-night stay, from the
+booking to the final cash count.
+
+2
+00:00:06,560 --> 00:00:12,979
+Before taking any cash, open Cash desk. The opening float is the
+money already in your till.
+
+3
+00:00:14,240 --> 00:00:18,815
+Here, that's two hundred Ghana cedis. Enter it and select Open
+shift.
+
+4
+00:00:19,400 --> 00:00:25,647
+In Reservations, select New reservation. Enter Maya's dates and
+select Find rooms.
+
+5
+00:00:26,240 --> 00:00:32,381
+Search for Maya first. If she doesn't have a profile, enter her
+name to create one with the booking.
+
+6
+00:00:32,960 --> 00:00:38,737
+Choose room one oh one. Review the room, dates and rate in the
+confirmation, then book it.
+
+7
+00:00:39,320 --> 00:00:44,932
+When Maya arrives, find her reservation. Once the room is ready,
+select Check in.
+
+8
+00:00:46,520 --> 00:00:49,485
+Open Maya's folio to see what she owes.
+
+9
+00:00:50,240 --> 00:00:55,256
+Add the laundry charge: twenty-five cedis. Review it before you
+confirm.
+
+10
+00:00:56,320 --> 00:01:00,629
+The total is three hundred and seventy-five cedis. Maya hands
+
+11
+00:01:00,629 --> 00:01:05,499
+you four hundred. Enter both amounts and select Record cash
+payment.
+
+12
+00:01:06,080 --> 00:01:11,942
+Check the change of twenty-five cedis, confirm the payment, and
+print the receipt if needed.
+
+13
+00:01:12,520 --> 00:01:16,571
+Once the balance is zero and Maya is leaving, select Check out.
+
+14
+00:01:17,160 --> 00:01:22,664
+Later, View details on the Guests page shows that Maya stayed in
+room one oh one.
+
+15
+00:01:23,240 --> 00:01:30,688
+Back at Cash desk, count what's physically in the till. In this
+example, it's five hundred and seventy-five cedis.
+
+16
+00:01:31,280 --> 00:01:38,259
+Close the shift and compare the counted and expected totals.
+Here they match, so the variance is zero.

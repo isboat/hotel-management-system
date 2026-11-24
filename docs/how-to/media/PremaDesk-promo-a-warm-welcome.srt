@@ -1,0 +1,29 @@
+1
+00:00:00,240 --> 00:00:06,287
+A guest has just arrived. Can your team find the booking, see
+which room is ready, and get them checked in?
+
+2
+00:00:07,360 --> 00:00:12,309
+With PremaDesk, your team can check room rates and housekeeping
+status in one place.
+
+3
+00:00:14,160 --> 00:00:19,005
+Before confirming a stay, staff can review the guest, room,
+dates, and nightly rate.
+
+4
+00:00:19,600 --> 00:00:25,617
+When the guest arrives, find the booking and check them in. The
+reservation status updates for the team.
+
+5
+00:00:26,200 --> 00:00:31,293
+Next time they visit, staff can look up their stay history and
+see which room they had before.
+
+6
+00:00:31,880 --> 00:00:38,317
+Give your team the information they need to welcome every guest.
+Request a PremaDesk demo for your property.

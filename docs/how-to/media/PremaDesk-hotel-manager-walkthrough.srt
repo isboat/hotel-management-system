@@ -1,0 +1,167 @@
+1
+00:00:00,336 --> 00:00:08,490
+Welcome to PremaDesk. This walkthrough shows how hotel
+managers and general managers can oversee daily operations.
+
+2
+00:00:08,996 --> 00:00:15,990
+Sign in with your work email and password. If you manage
+more than one hotel, select the right one from Property.
+
+3
+00:00:16,493 --> 00:00:22,788
+On Overview, check today's arrivals, departures, and room
+readiness so you know where the team needs help.
+
+4
+00:00:23,296 --> 00:00:29,293
+Open Rooms to check which rooms are in service, their
+housekeeping status, and their nightly rates.
+
+5
+00:00:29,798 --> 00:00:34,111
+Select Add room to enter a room number, type, capacity, and
+rate.
+
+6
+00:00:34,614 --> 00:00:39,535
+Use Edit to update details or take a room out of service so
+it can't be booked.
+
+7
+00:00:40,036 --> 00:00:44,068
+Open Maintenance to report a problem or review open issues.
+
+8
+00:00:44,577 --> 00:00:51,262
+Once the repair is complete, select Mark fixed. The issue
+stays in the history with its fixed date, so you can check
+
+9
+00:00:51,262 --> 00:00:52,807
+when the work was done.
+
+10
+00:00:53,317 --> 00:00:58,773
+Open Reservations and search by guest name or filter by
+status. Here you can create
+
+11
+00:00:58,773 --> 00:01:01,426
+bookings and check guests in and
+out.
+
+12
+00:01:01,932 --> 00:01:07,409
+Select Folio to review the guest's charges and balance. If
+the guest was overcharged,
+
+13
+00:01:07,409 --> 00:01:10,464
+open the original payment with
+View receipt.
+
+14
+00:01:10,970 --> 00:01:16,895
+Before recording a refund, open your own shift in Cash desk.
+Enter the cash already in the
+
+15
+00:01:16,895 --> 00:01:20,274
+till as the opening float and
+select Open shift.
+
+16
+00:01:20,785 --> 00:01:29,047
+Return to the original receipt. Enter the cash refund amount
+and reason, then select Record cash refund. The refund is
+
+17
+00:01:29,047 --> 00:01:31,858
+included in your till reconciliation.
+
+18
+00:01:32,369 --> 00:01:37,961
+Open Guests to find or add a guest profile. Select View
+details to check stay history
+
+19
+00:01:37,961 --> 00:01:41,800
+and past room numbers before
+helping a returning guest.
+
+20
+00:01:42,309 --> 00:01:47,303
+Use Edit to update contact details or record a preference
+for their next visit.
+
+21
+00:01:47,809 --> 00:01:55,133
+Open Cash desk to review cash shifts for the hotel. On a
+closed shift, compare Counted with Expected. The variance
+
+22
+00:01:55,133 --> 00:01:57,987
+shows whether the till was short or over.
+
+23
+00:01:58,503 --> 00:02:03,044
+At the end of your shift, enter the actual cash count and
+select Close shift.
+
+24
+00:02:03,550 --> 00:02:10,983
+Open Staff to manage front desk and housekeeping access.
+Enter the staff member's name, email, role, and initial
+
+25
+00:02:10,983 --> 00:02:13,791
+password, then select Add staff member.
+
+26
+00:02:14,297 --> 00:02:18,031
+Use Edit to update their role, or Suspend to pause access.
+
+27
+00:02:18,538 --> 00:02:23,955
+If someone forgets their password, select Reset password and
+share the single-use code
+
+28
+00:02:23,955 --> 00:02:26,883
+privately. It expires after thirty
+minutes.
+
+29
+00:02:27,392 --> 00:02:32,655
+Open Reports to review how rooms are performing. Set the
+start date and the first
+
+30
+00:02:32,655 --> 00:02:35,474
+date to exclude, then select Run
+report.
+
+31
+00:02:35,981 --> 00:02:43,337
+Use room nights booked and occupancy to see demand. Check
+room revenue, average daily rate, and revenue per available
+
+32
+00:02:43,337 --> 00:02:46,952
+room to understand how bookings contribute to revenue.
+
+33
+00:02:47,458 --> 00:02:53,191
+Open Change password to update your own password. Enter your
+current password, then enter and
+
+34
+00:02:53,191 --> 00:02:56,370
+confirm a new one of at
+least twelve characters.
+
+35
+00:02:56,871 --> 00:03:02,631
+Select Update password and sign in again with the new
+password. When you're done, select Sign out.
