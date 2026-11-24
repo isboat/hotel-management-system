@@ -1,5 +1,7 @@
 # PremaDesk front desk walkthrough
 
+[Download the walkthrough (MP4)](media/PremaDesk-front-desk-walkthrough.mp4?raw=true) · [Download the captions (SRT)](media/PremaDesk-front-desk-walkthrough.srt?raw=true)
+
 *Recording note. Use a demo Front Desk Agent account and sample guest details. The headings are screen cues. Read the paragraphs aloud.*
 
 ## Sign in
