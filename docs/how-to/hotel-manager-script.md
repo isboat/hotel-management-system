@@ -1,5 +1,7 @@
 # PremaDesk hotel manager walkthrough
 
+[Download the walkthrough (MP4)](media/PremaDesk-hotel-manager-walkthrough.mp4?raw=true) · [Download the captions (SRT)](media/PremaDesk-hotel-manager-walkthrough.srt?raw=true)
+
 *Recording note. Use a demo Manager account and sample guest, staff, and cash records. The headings are screen cues. Read the paragraphs aloud.*
 
 ## Sign in and Overview
