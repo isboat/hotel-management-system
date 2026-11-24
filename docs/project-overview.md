@@ -26,12 +26,12 @@ Each hotel or guest house is a separate tenant. A single HMS deployment serves m
 | Front desk agents and receptionists | Check guests in and out, assign rooms, handle walk-in reservations, collect cash, issue receipts, and issue room keys. |
 | Housekeeping staff and supervisors | Update room status and report maintenance issues. Staff mark rooms clean after servicing them, and supervisors mark rooms inspected after checking them. |
 | Hotel managers and general managers (GMs) | Perform all front desk duties and manage rooms and eligible staff accounts at their property. Oversee daily operations, adjust room pricing, monitor staff performance, and review financial and occupancy reports. |
-| Administrators | Configure assigned properties and manage staff access within those properties, including manager and housekeeping accounts. |
+| Administrators | Manage staff access within assigned properties, including manager and housekeeping accounts. |
 | System administrators | Create and manage hotel tenants, appoint their initial property administrators, and manage platform-wide configuration, deployments, monitoring, backups, and recovery. Access to hotel operational records requires a separate property role. |
 
 ## Tenant management
 
-System administrators use a platform administration area to create tenants, update tenant details, suspend and reactivate access, and archive tenants that have stopped using the system. Each new tenant receives a unique property ID and an invitation for its initial property administrator. Property administrators then configure their hotel and manage staff access within it.
+System administrators use a platform administration area to create tenants, update tenant details, suspend and reactivate access, and archive tenants that have stopped using the system. Each new tenant receives a unique property ID and an invitation for its initial property administrator. Property administrators then manage staff access and hotel operations. System administrators alone edit hotel names and contact details.
 
 Suspension blocks staff access and pauses tenant integrations while preserving records. Archive retired tenants so their records remain available for authorised retention and recovery. Record tenant creation, administrator appointments, and lifecycle changes in the platform audit log.
 

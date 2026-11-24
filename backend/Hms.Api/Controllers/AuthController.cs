@@ -64,6 +64,32 @@ public sealed class AuthController(HotelDatabase database, IPasswordHasher<Staff
         return NoContent();
     }
 
+    /// <summary>Changes the signed-in staff member's password and invalidates their existing sessions.</summary>
+    [Authorize]
+    [EnableRateLimiting("credentials")]
+    [HttpPost("change-password")]
+    [AuditAction("changed their password", "change their password")]
+    public async Task<IActionResult> ChangePassword(ChangePasswordInput input)
+    {
+        var staff = await database.Staff.SingleOrDefaultAsync(row => row.Id == TenantAccess.Actor(User));
+        if (staff is null || User.FindFirst("session_version")?.Value != staff.SessionVersion.ToString())
+            return Unauthorized();
+        if (hasher.VerifyHashedPassword(staff, staff.PasswordHash, input.CurrentPassword) == PasswordVerificationResult.Failed)
+            return BadRequest("The current password is incorrect.");
+        if (input.NewPassword == input.CurrentPassword)
+            return BadRequest("Choose a password different from your current password.");
+
+        var hash = hasher.HashPassword(staff, input.NewPassword);
+        await using var transaction = await database.Database.BeginTransactionAsync();
+        await database.PasswordResets.Where(row => row.StaffId == staff.Id).ExecuteDeleteAsync();
+        var updated = await database.Staff.Where(row => row.Id == staff.Id && row.SessionVersion == staff.SessionVersion)
+            .ExecuteUpdateAsync(set => set.SetProperty(row => row.PasswordHash, hash)
+                .SetProperty(row => row.SessionVersion, row => row.SessionVersion + 1));
+        if (updated == 0) return Unauthorized();
+        await transaction.CommitAsync();
+        return NoContent();
+    }
+
     /// <summary>Consumes a reset code and invalidates all prior access tokens.</summary>
     [EnableRateLimiting("credentials")]
     [HttpPost("reset")]

@@ -52,14 +52,8 @@ public sealed class HotelApiTests
             Assert.NotEqual(refresh.refreshToken, rotated.GetProperty("refreshToken").GetString());
             Assert.Equal(HttpStatusCode.Unauthorized, (await staff.PostAsJsonAsync("/api/v1/auth/refresh", refresh)).StatusCode);
             var path = $"/api/v1/properties/{hotel}";
-            var propertyDetails = await Read(await staff.GetAsync($"{path}/details"));
-            Assert.Equal(detailsUpdate.telephone, propertyDetails.GetProperty("telephone").GetString());
-            var propertyEdit = new { name = "Accra Lodge", telephone = "+233 20 555 2010", description = "Guest house", address = "18 High Street, Accra" };
-            await Read(await staff.PutAsJsonAsync($"{path}/details", propertyEdit));
-            var savedDetails = await Read(await staff.GetAsync($"{path}/details"));
-            Assert.Equal(propertyEdit.telephone, savedDetails.GetProperty("telephone").GetString());
-            Assert.Equal(propertyEdit.address, savedDetails.GetProperty("address").GetString());
-            Assert.Equal(HttpStatusCode.Forbidden, (await staff.PutAsJsonAsync($"/api/v1/properties/{other}/details", propertyEdit)).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await staff.PutAsJsonAsync($"/api/v1/platform/properties/{hotel}", detailsUpdate)).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, (await staff.PutAsJsonAsync($"{path}/details", detailsUpdate)).StatusCode);
             Assert.Equal(HttpStatusCode.Forbidden, (await staff.PostAsJsonAsync("/api/v1/platform/properties", new { name = "Denied" })).StatusCode);
             var guest = await Read(await staff.PostAsJsonAsync($"{path}/guests", new { name = "Smith", idNumber = "  GHA-00123  " }));
             var guestId = guest.GetProperty("id").GetGuid();
@@ -193,6 +187,24 @@ public sealed class HotelApiTests
                 row.GetProperty("staffEmail").GetString() == "ADMIN@EXAMPLE.TEST");
             Assert.Equal(HttpStatusCode.NoContent, (await platform.PatchAsJsonAsync($"/api/v1/platform/properties/{hotel}", new { status = "Suspended" })).StatusCode);
             Assert.Equal(HttpStatusCode.Forbidden, (await staff.GetAsync($"{path}/rooms")).StatusCode);
+            const string newPassword = "A-strong-new-password";
+            using var anonymous = factory.CreateClient();
+            var change = new { currentPassword = password, newPassword };
+            Assert.Equal(HttpStatusCode.Unauthorized,
+                (await anonymous.PostAsJsonAsync("/api/v1/auth/change-password", change)).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, (await staff.PostAsJsonAsync("/api/v1/auth/change-password",
+                new { currentPassword = "Incorrect password", newPassword })).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, (await staff.PostAsJsonAsync("/api/v1/auth/change-password",
+                new { currentPassword = password, newPassword = "short" })).StatusCode);
+            Assert.Equal(HttpStatusCode.NoContent,
+                (await staff.PostAsJsonAsync("/api/v1/auth/change-password", change)).StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, (await staff.GetAsync("/api/v1/auth/properties")).StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, (await staff.PostAsJsonAsync("/api/v1/auth/refresh",
+                new { refreshToken = rotated.GetProperty("refreshToken").GetString() })).StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.PostAsJsonAsync("/api/v1/auth/login",
+                new { email = "admin@example.test", password })).StatusCode);
+            await SignIn(staff, "admin@example.test", newPassword);
+
         }
         finally
         {

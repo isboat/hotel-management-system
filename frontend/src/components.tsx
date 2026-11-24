@@ -73,7 +73,7 @@ export function ActionForm({ children, action, label, busyLabel = 'Saving…' }:
 
 export const field = (data: FormData, key: string) => String(data.get(key) ?? '')
 
-export function SignIn({ onSession }: { onSession: (session: Session) => void }) {
+export function SignIn({ onSession, passwordChanged = false }: { onSession: (session: Session) => void; passwordChanged?: boolean }) {
   const reducedMotion = useReducedMotion()
   const [reset, setReset] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -89,7 +89,7 @@ export function SignIn({ onSession }: { onSession: (session: Session) => void })
     <m.section className="sign-in-form" initial={reducedMotion ? false : { opacity: .6, y: 10 }}
       animate={{ opacity: 1, y: 0 }} transition={{ duration: .32, ease: 'easeOut' }}>
       <h2>{reset ? 'Reset password' : 'Sign in'}</h2>
-      {success && <p role="status">Password updated. Sign in with your new password.</p>}
+      {(success || passwordChanged) && !reset && <p role="status">Password updated. Sign in with your new password.</p>}
       <ActionForm key={String(reset)} label={reset ? 'Update password' : 'Sign in'} busyLabel={reset ? 'Updating password…' : 'Signing in…'} action={async data => {
         const api = createApi()
         if (reset) {
