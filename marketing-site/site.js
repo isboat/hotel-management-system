@@ -70,3 +70,51 @@ form.addEventListener('submit', event => {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   status.textContent = 'Draft downloaded. Your request has not been sent.';
 });
+
+const slideshow = document.querySelector('.hero-slideshow');
+const slides = [...document.querySelectorAll('.hero-photo')];
+const slideButtons = [...slideshow.querySelectorAll('[data-slide]')];
+const slideCaption = slideshow.querySelector('.slide-caption');
+const toggle = slideshow.querySelector('.slide-toggle');
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const captions = ['Hotel reception', 'Guest rooms', 'Reservations'];
+let currentSlide = 0;
+let playing = !reducedMotion.matches;
+let timer;
+
+function showSlide(index) {
+  currentSlide = index;
+  slides.forEach((slide, position) => {
+    const selected = position === index;
+    slide.classList.toggle('is-active', selected);
+    slideButtons[position].setAttribute('aria-pressed', String(selected));
+  });
+  slideCaption.textContent = captions[index];
+}
+
+function updatePlayback() {
+  window.clearInterval(timer);
+  toggle.textContent = playing ? 'Pause' : 'Play';
+  toggle.setAttribute('aria-label', playing ? 'Pause slideshow' : 'Play slideshow');
+  slideCaption.setAttribute('aria-live', playing ? 'off' : 'polite');
+  if (playing && !document.hidden) {
+    timer = window.setInterval(() => showSlide((currentSlide + 1) % slides.length), 6500);
+  }
+}
+
+slideButtons.forEach((button, index) => button.addEventListener('click', () => {
+  playing = false;
+  updatePlayback();
+  showSlide(index);
+}));
+toggle.addEventListener('click', () => {
+  playing = !playing;
+  updatePlayback();
+});
+reducedMotion.addEventListener('change', event => {
+  if (event.matches) playing = false;
+  updatePlayback();
+});
+document.addEventListener('visibilitychange', updatePlayback);
+slideshow.hidden = false;
+updatePlayback();

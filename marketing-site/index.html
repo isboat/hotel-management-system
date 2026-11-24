@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="PremaDesk brings reservations, guest records, housekeeping, cash shifts, and reporting together for independent hotels and guesthouses in Ghana.">
-  <meta name="theme-color" content="#102a27">
+  <meta name="theme-color" content="#eaf4fd">
   <title>PremaDesk | Hotel management for Ghana</title>
   <link rel="icon" type="image/svg+xml" href="assets/mark.svg">
   <link rel="preload" as="image" href="assets/lobby.webp">
@@ -25,12 +25,25 @@
   </header>
   <main id="main">
     <section class="hero" id="home" aria-labelledby="home-title">
-      <img class="hero-photo" src="assets/lobby.webp" alt="" fetchpriority="high">
+      <div class="hero-photos" aria-hidden="true">
+        <img class="hero-photo is-active" src="assets/lobby.webp" alt="" fetchpriority="high">
+        <img class="hero-photo" src="assets/rooms.webp" alt="" decoding="async" fetchpriority="low">
+        <img class="hero-photo" src="assets/reservations.webp" alt="" decoding="async" fetchpriority="low">
+      </div>
       <div class="wrap hero-copy">
         <p class="eyebrow">Hotel management software for Ghana</p>
         <h1 id="home-title">Run your hotel<br>from one place.</h1>
         <p>Give your team one place to manage reservations, ready rooms, guest stays, and cash. Built for independent hotels and guesthouses.</p>
         <div class="actions"><a class="button primary" href="#contact">Request a demo <span aria-hidden="true">→</span></a><a class="button quiet" href="#services">Explore features <span aria-hidden="true">↓</span></a></div>
+      </div>
+      <div class="wrap hero-slideshow" role="group" aria-label="Homepage slideshow" hidden>
+        <p class="slide-caption" aria-live="off">Hotel reception</p>
+        <div class="slide-controls">
+          <button type="button" data-slide="0" aria-label="Show hotel reception" aria-pressed="true">1</button>
+          <button type="button" data-slide="1" aria-label="Show guest rooms" aria-pressed="false">2</button>
+          <button type="button" data-slide="2" aria-label="Show reservations" aria-pressed="false">3</button>
+          <button type="button" class="slide-toggle">Pause</button>
+        </div>
       </div>
     </section>
 
