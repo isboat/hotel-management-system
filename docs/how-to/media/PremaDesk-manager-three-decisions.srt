@@ -1,0 +1,70 @@
+1
+00:00:00,240 --> 00:00:03,825
+Here's a manager's quick walkthrough: follow up on a repair,
+
+2
+00:00:03,825 --> 00:00:07,898
+correct a cash charge, and check how the rooms are performing.
+
+3
+00:00:08,480 --> 00:00:17,131
+On Rooms, open Maintenance. Select the room and describe the
+problem. Here, room one oh one has a loose bathroom tap.
+
+4
+00:00:17,720 --> 00:00:25,117
+Once the tap is repaired, select Mark fixed. Filter to Fixed to
+find the issue and see when it was resolved.
+
+5
+00:00:25,720 --> 00:00:32,122
+For a cash correction, search Reservations for the guest's
+booking. Here, we're looking for Maya Mensah.
+
+6
+00:00:32,720 --> 00:00:40,189
+Open the folio and select View receipt on the original payment.
+Check what Maya paid before you return cash.
+
+7
+00:00:40,760 --> 00:00:45,304
+Open your own cash shift before processing the refund. Enter the
+
+8
+00:00:45,304 --> 00:00:49,978
+opening float so the till reconciliation starts with the correct
+amount.
+
+9
+00:00:50,560 --> 00:00:55,212
+Back at the original receipt, enter twenty-five cedis and a
+reason,
+
+10
+00:00:55,212 --> 00:00:59,995
+then record the cash refund. The app displays a refund receipt.
+
+11
+00:01:00,600 --> 00:01:08,619
+On Cash desk, use Counted and Expected to review a closed shift.
+Variance shows the difference between those amounts.
+
+12
+00:01:09,200 --> 00:01:15,748
+Close your own shift with the actual cash count. The refund is
+included in what the system expects.
+
+13
+00:01:16,320 --> 00:01:21,575
+In Reports, pick a start date and the first date to leave out.
+Then run the report.
+
+14
+00:01:23,160 --> 00:01:28,749
+Use room nights and occupancy to see demand. Compare room
+revenue, average daily
+
+15
+00:01:28,749 --> 00:01:34,468
+rate, and revenue per available room to understand the value of
+those bookings.
