@@ -226,6 +226,34 @@ public sealed class HotelApiTests
             Assert.Contains("Property Admin (admin@example.test)", auditEntry.GetProperty("action").GetString());
             Assert.DoesNotContain(code!, auditEntry.GetRawText());
 
+            await Read(await platform.PostAsJsonAsync($"/api/v1/platform/properties/{other}/administrator",
+                new { email = "admin@example.test", name = "Property Admin", role = "Administrator" }));
+            var userPath = $"/api/v1/platform/users/{target.GetProperty("id").GetGuid()}";
+            var accessPath = $"{userPath}/properties/{hotel}";
+            Assert.Equal(HttpStatusCode.NoContent, (await platform.PatchAsJsonAsync(
+                $"/api/v1/platform/properties/{hotel}", new { status = "Active" })).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await staff.GetAsync($"{path}/rooms")).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await staff.DeleteAsync(accessPath)).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await staff.DeleteAsync(userPath)).StatusCode);
+            Assert.Equal(HttpStatusCode.NoContent, (await platform.DeleteAsync(accessPath)).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await staff.GetAsync($"{path}/rooms")).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await staff.GetAsync($"/api/v1/properties/{other}/rooms")).StatusCode);
+
+            var remaining = await Read(await platform.GetAsync("/api/v1/platform/users?search=admin%40example.test"));
+            var memberships = remaining.GetProperty("items")[0].GetProperty("hotels");
+            Assert.Equal(other, Assert.Single(memberships.EnumerateArray()).GetProperty("id").GetString());
+            var systemAdmin = Assert.Single(users.GetProperty("items").EnumerateArray(), row => row.GetProperty("isSystemAdmin").GetBoolean());
+            Assert.Equal(HttpStatusCode.Conflict,
+                (await platform.DeleteAsync($"/api/v1/platform/users/{systemAdmin.GetProperty("id").GetGuid()}")).StatusCode);
+            var deleteCode = (await Read(await platform.PostAsync(resetPath, null))).GetProperty("code").GetString();
+            Assert.Equal(HttpStatusCode.NoContent, (await platform.DeleteAsync(userPath)).StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, (await staff.GetAsync("/api/v1/auth/properties")).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, (await anonymous.PostAsJsonAsync("/api/v1/auth/reset",
+                new { code = deleteCode, password })).StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.PostAsJsonAsync("/api/v1/auth/login",
+                new { email = "admin@example.test", password = recovery.password })).StatusCode);
+
+
         }
         finally
         {

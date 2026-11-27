@@ -102,7 +102,8 @@ public sealed class AuthController(HotelDatabase database, IPasswordHasher<Staff
         if (reset is null || reset.ExpiresUtc <= DateTime.UtcNow) return BadRequest("Invalid or expired reset code.");
         if (await database.PasswordResets.Where(row => row.Digest == digest).ExecuteDeleteAsync() != 1)
             return BadRequest("Invalid or expired reset code.");
-        var staff = await database.Staff.SingleAsync(row => row.Id == reset.StaffId);
+        var staff = await database.Staff.SingleOrDefaultAsync(row => row.Id == reset.StaffId);
+        if (staff is null) return BadRequest("Invalid or expired reset code.");
         var hash = hasher.HashPassword(staff, input.Password);
         await database.Staff.Where(row => row.Id == staff.Id).ExecuteUpdateAsync(set =>
             set.SetProperty(row => row.PasswordHash, hash).SetProperty(row => row.SessionVersion, row => row.SessionVersion + 1));

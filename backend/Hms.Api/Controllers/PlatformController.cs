@@ -1,3 +1,4 @@
+using System.Data;
 using Hms.Api.Contracts;
 using Hms.Api.Data;
 using Hms.Api.Security;
@@ -29,7 +30,15 @@ public sealed class PlatformController(HotelDatabase database) : ControllerBase
         const int pageSize = 50;
         var users = await query.OrderBy(user => user.Name).ThenBy(user => user.Id)
             .Skip(offset).Take(pageSize + 1)
-            .Select(user => new { user.Id, user.Name, user.Email, user.IsSystemAdmin }).ToListAsync();
+            .Select(user => new
+            {
+                user.Id, user.Name, user.Email, user.IsSystemAdmin,
+                Hotels = (from member in database.Memberships
+                          join hotel in database.Hotels on member.HotelId equals hotel.Id
+                          where member.StaffId == user.Id
+                          orderby hotel.Name, hotel.Id
+                          select new { hotel.Id, hotel.Name, member.Role, member.Active }).ToList()
+            }).ToListAsync();
         return Ok(new { items = users.Take(pageSize), hasMore = users.Count > pageSize });
     }
 
@@ -46,6 +55,44 @@ public sealed class PlatformController(HotelDatabase database) : ControllerBase
         var code = await PasswordResetCodes.IssueAsync(database, staffId);
         AuditActionAttribute.Describe(HttpContext, $"issued a password reset code for {user.Name} ({user.Email.ToLowerInvariant()})");
         return Ok(new { code });
+    }
+
+    [HttpDelete("users/{staffId:guid}/properties/{propertyId:guid}")]
+    [AuditAction("revoked a user’s hotel access", "revoke a user’s hotel access")]
+    public async Task<IActionResult> RevokeHotelAccess(Guid staffId, Guid propertyId)
+    {
+        if (!await IsAdministrator()) return Forbid();
+        var target = await (from member in database.Memberships
+                            join staff in database.Staff on member.StaffId equals staff.Id
+                            join hotel in database.Hotels on member.HotelId equals hotel.Id
+                            where member.StaffId == staffId && member.HotelId == propertyId
+                            select new { staff.Email, staff.Name, Hotel = hotel.Name }).SingleOrDefaultAsync();
+        if (target is null) return NotFound();
+
+        var removed = await database.Memberships.Where(row => row.StaffId == staffId && row.HotelId == propertyId)
+            .ExecuteDeleteAsync();
+        if (removed == 0) return NotFound();
+        AuditActionAttribute.Describe(HttpContext, $"revoked {target.Name} ({target.Email.ToLowerInvariant()})’s access to {target.Hotel}");
+        return NoContent();
+    }
+
+    [HttpDelete("users/{staffId:guid}")]
+    [AuditAction("deleted a platform user account", "delete a platform user account")]
+    public async Task<IActionResult> DeleteUser(Guid staffId)
+    {
+        await using var transaction = await database.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        if (!await IsAdministrator()) return Forbid();
+        if (TenantAccess.Actor(User) == staffId) return Conflict("You cannot delete your own account.");
+        var target = await database.Staff.AsNoTracking().SingleOrDefaultAsync(row => row.Id == staffId);
+        if (target is null) return NotFound();
+
+        await database.PasswordResets.Where(row => row.StaffId == staffId).ExecuteDeleteAsync();
+        await database.RefreshSessions.Where(row => row.StaffId == staffId).ExecuteDeleteAsync();
+        // Memberships cascade with the account. Financial and audit records retain the original account ID.
+        await database.Staff.Where(row => row.Id == staffId).ExecuteDeleteAsync();
+        await transaction.CommitAsync();
+        AuditActionAttribute.Describe(HttpContext, $"deleted the account for {target.Name} ({target.Email.ToLowerInvariant()})");
+        return NoContent();
     }
 
     [HttpGet("properties")]

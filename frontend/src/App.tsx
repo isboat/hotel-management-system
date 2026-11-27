@@ -114,7 +114,7 @@ function Workspace({ session, onRotate, onLogout }: {
         transition={{ duration: .22, ease: 'easeOut' }}>
         <Notice text={error} />
         {page === 'Change password' ? <ChangePassword api={api} onPasswordChanged={() => onLogout(session, true)} />
-          : session.isSystemAdmin ? (page === 'Tenants' ? <Tenants api={api} /> : page === 'Users' ? <PlatformUsers api={api} /> : <AuditLog api={api} path="/platform" />)
+          : session.isSystemAdmin ? (page === 'Tenants' ? <Tenants api={api} /> : page === 'Users' ? <PlatformUsers api={api} currentUserId={session.id} /> : <AuditLog api={api} path="/platform" />)
           : !hotel ? <><PageHeading title="Properties" icon={Building2} /><p className="empty">No active property available.</p></>
           : page === 'Rooms' ? <Rooms api={api} path={path} role={role} />
           : page === 'Reservations' && frontDesk ? <Reservations api={api} path={path} canRefund={manager} property={hotel.name} />
