@@ -7,6 +7,7 @@ import { AuditLog, Reports, StaffDirectory, Tenants } from './Administration'
 import { CashDesk } from './CashDesk'
 import { ChangePassword } from './ChangePassword'
 import { Guests } from './Guests'
+import { PlatformUsers } from './PlatformUsers'
 import { Notice, PageHeading, SignIn, useRecords } from './components'
 import { Reservations } from './Reservations'
 import { Rooms } from './Rooms'
@@ -66,7 +67,7 @@ function Workspace({ session, onRotate, onLogout }: {
   const manager = ['Manager', 'Administrator'].includes(role)
   const frontDesk = manager || role === 'FrontDesk'
   const items = session.isSystemAdmin
-    ? [{ name: 'Tenants', icon: Building2 }, { name: 'Audit log', icon: ClipboardList }]
+    ? [{ name: 'Tenants', icon: Building2 }, { name: 'Users', icon: Users }, { name: 'Audit log', icon: ClipboardList }]
     : [
       { name: 'Overview', icon: LayoutDashboard }, { name: 'Rooms', icon: BedDouble },
       ...(frontDesk ? [{ name: 'Reservations', icon: CalendarDays }, { name: 'Guests', icon: ContactRound }, { name: 'Cash desk', icon: Wallet }] : []),
@@ -77,6 +78,7 @@ function Workspace({ session, onRotate, onLogout }: {
   const activePage = page === 'Change password' ? page : !session.isSystemAdmin && !hotel ? 'Properties'
     : items.some(item => item.name === page) ? page : 'Overview'
   const photo = activePage === 'Overview' ? '/hotel-lobby.webp'
+    : activePage === 'Users' ? '/heroes/staff.webp'
     : activePage === 'Change password' ? '/heroes/sign-in.webp' : `/heroes/${activePage.toLowerCase().replaceAll(' ', '-')}.webp`
   const navigation = {
     hotels, hotel, page, items,
@@ -112,7 +114,7 @@ function Workspace({ session, onRotate, onLogout }: {
         transition={{ duration: .22, ease: 'easeOut' }}>
         <Notice text={error} />
         {page === 'Change password' ? <ChangePassword api={api} onPasswordChanged={() => onLogout(session, true)} />
-          : session.isSystemAdmin ? (page === 'Tenants' ? <Tenants api={api} /> : <AuditLog api={api} path="/platform" />)
+          : session.isSystemAdmin ? (page === 'Tenants' ? <Tenants api={api} /> : page === 'Users' ? <PlatformUsers api={api} /> : <AuditLog api={api} path="/platform" />)
           : !hotel ? <><PageHeading title="Properties" icon={Building2} /><p className="empty">No active property available.</p></>
           : page === 'Rooms' ? <Rooms api={api} path={path} role={role} />
           : page === 'Reservations' && frontDesk ? <Reservations api={api} path={path} canRefund={manager} property={hotel.name} />
