@@ -134,3 +134,24 @@ The API creates the account on startup once it can connect to the migrated datab
 Passwords use ASP.NET Core Identity's password hasher. The API issues short-lived JWTs and rotating, hashed refresh credentials. The React client uses browser session storage so credentials survive reloading the current tab across the separate Azure origins. Sign-out or rejected session credentials clear the stored session. Password reset codes are single-use and issued for private delivery by authorised staff. Sign-out and successful reset invalidate prior sessions.
 
 The API records named actions such as sign-ins, guest detail views, room assignments, and failed attempts. Authorised readers see the actor’s current staff name and email alongside each event. Guest names and room numbers provide context without logging guest contact details or credentials. Successful cash and charge events also have transactional audit records. OTA synchronisation, automated password reset delivery, marketing campaigns, and historical room-capacity reporting still need implementation. The current occupancy report uses booked nights and current bookable room inventory.
+
+## Recover a locked-out System Administrator
+
+Use the recovery command from a trusted operator workstation when nobody can sign in as a System Administrator. It connects directly to the existing Azure SQL database using your operator identity. Run it from a machine that can reach the SQL endpoint through the configured firewall or private network.
+
+1. Use the published backend package for the running release and install the .NET 10 runtime on your workstation.
+2. Sign in with a Microsoft Entra identity authorized for database recovery. The identity needs to read the staff table, delete and insert password reset records, and insert an audit event. Use your organization’s MFA policy for that identity.
+3. Set the following environment variable for this terminal. Replace both placeholders with the production server and database. The interactive connection prompts for your Entra credentials.
+
+   ```bash
+   export PREMADESK_RECOVERY_SQL='Server=tcp:<sql-server>.database.windows.net,1433;Database=<database>;Authentication=Active Directory Interactive;Encrypt=True;TrustServerCertificate=False;'
+   dotnet Hms.Api.dll recover-system-admin admin@example.com
+   unset PREMADESK_RECOVERY_SQL
+   ```
+
+   In PowerShell, use `$env:PREMADESK_RECOVERY_SQL = '<connection string>'` to set it and `Remove-Item Env:PREMADESK_RECOVERY_SQL` afterward.
+
+4. Share the displayed code privately with the administrator. They select **I have a reset code** on the sign-in page and enter the code and a new password. The code expires after 30 minutes and works once. Completing the reset invalidates existing sessions.
+5. Verify the administrator can sign in. The platform audit log records the target account and SQL operator identity.
+
+Run the command in an interactive terminal outside the Web App. It replaces earlier reset codes for the specified account and leaves the bootstrap settings untouched.
