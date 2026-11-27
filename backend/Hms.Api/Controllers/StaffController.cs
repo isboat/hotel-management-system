@@ -1,6 +1,4 @@
 using System.Data;
-using System.Security.Cryptography;
-using System.Text;
 using Hms.Api.Contracts;
 using Hms.Api.Data;
 using Hms.Api.Security;
@@ -118,10 +116,6 @@ public sealed class StaffController(HotelDatabase database, TenantAccess access,
         if (member is null || !await CanManage(hotelId, member.Role) ||
             await database.Memberships.AnyAsync(row => row.StaffId == staffId && row.HotelId != hotelId))
             return Forbid();
-        var code = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-        var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(code)));
-        database.PasswordResets.Add(new PasswordReset(digest, staffId, DateTime.UtcNow.AddMinutes(30)));
-        await database.SaveChangesAsync();
-        return Ok(new { code });
+        return Ok(new { code = await PasswordResetCodes.IssueAsync(database, staffId) });
     }
 }

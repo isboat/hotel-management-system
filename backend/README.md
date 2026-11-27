@@ -134,3 +134,7 @@ The API creates the account on startup once it can connect to the migrated datab
 Passwords use ASP.NET Core Identity's password hasher. The API issues short-lived JWTs and rotating, hashed refresh credentials. The React client uses browser session storage so credentials survive reloading the current tab across the separate Azure origins. Sign-out or rejected session credentials clear the stored session. Password reset codes are single-use and issued for private delivery by authorised staff. Sign-out and successful reset invalidate prior sessions.
 
 The API records named actions such as sign-ins, guest detail views, room assignments, and failed attempts. Authorised readers see the actor’s current staff name and email alongside each event. Guest names and room numbers provide context without logging guest contact details or credentials. Successful cash and charge events also have transactional audit records. OTA synchronisation, automated password reset delivery, marketing campaigns, and historical room-capacity reporting still need implementation. The current occupancy report uses booked nights and current bookable room inventory.
+
+## Recover a locked-out System Administrator
+
+If no System Administrator can sign in, an authorized database operator can issue a single-use reset code by running the [emergency recovery script](../sql/recover-system-admin.sql) in SSMS. Follow the [Azure SQL recovery instructions](../sql/README.md#recover-a-locked-out-system-administrator).

@@ -36,3 +36,15 @@ dotnet ef migrations script --idempotent --project backend/Hms.Api --output sql/
 ```
 
 Review and commit the refreshed SQL script with the source migration.
+
+## Recover a locked-out System Administrator
+
+Run [recover-system-admin.sql](recover-system-admin.sql) only when recovery is needed. Use an authorized operator identity with permission to read `dbo.Staff`, delete and insert rows in `dbo.PasswordResets`, and insert rows in `dbo.Audit`.
+
+1. In SSMS, connect directly to the PremaDesk application database using your organization's Microsoft Entra MFA policy.
+2. Open the script and set `@ExpectedDatabase` to the application database name and `@AdministratorEmail` to the existing System Administrator's email. Run the entire script.
+3. Share the code from the SSMS results privately with the administrator. Avoid exporting or retaining the result grid. The code expires after 30 minutes and replaces any earlier codes for that account.
+4. The administrator selects **I have a reset code** on the sign-in page and enters the code and a new password. Completing the reset invalidates existing sessions.
+5. Verify that the administrator can sign in. The platform audit log records the SQL login and target account. The reset code is stored only as a digest.
+
+This operation requires the existing application schema. It uses the existing password reset flow and requires no schema changes.

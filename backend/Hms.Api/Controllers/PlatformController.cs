@@ -13,6 +13,41 @@ public sealed class PlatformController(HotelDatabase database) : ControllerBase
 {
     private Task<bool> IsAdministrator() => database.Staff.AnyAsync(row => row.Id == TenantAccess.Actor(User) && row.IsSystemAdmin);
 
+    /// <summary>Lists platform accounts, including accounts without a hotel membership.</summary>
+    [HttpGet("users")]
+    [AuditAction("viewed the platform user directory", "view the platform user directory")]
+    public async Task<IActionResult> ListUsers(string? search, int offset = 0)
+    {
+        if (!await IsAdministrator()) return Forbid();
+        if (offset < 0) return BadRequest("Offset must be zero or greater.");
+        var query = database.Staff.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToUpperInvariant();
+            query = query.Where(user => user.Email.Contains(term) || user.Name.ToUpper().Contains(term));
+        }
+        const int pageSize = 50;
+        var users = await query.OrderBy(user => user.Name).ThenBy(user => user.Id)
+            .Skip(offset).Take(pageSize + 1)
+            .Select(user => new { user.Id, user.Name, user.Email, user.IsSystemAdmin }).ToListAsync();
+        return Ok(new { items = users.Take(pageSize), hasMore = users.Count > pageSize });
+    }
+
+    /// <summary>Issues account-wide recovery for any user, regardless of hotel membership.</summary>
+    [HttpPost("users/{staffId:guid}/reset")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    [AuditAction("issued a platform password reset code", "issue a platform password reset code")]
+    public async Task<IActionResult> ResetUserPassword(Guid staffId)
+    {
+        if (!await IsAdministrator()) return Forbid();
+        var user = await database.Staff.AsNoTracking().SingleOrDefaultAsync(row => row.Id == staffId);
+        if (user is null) return NotFound();
+
+        var code = await PasswordResetCodes.IssueAsync(database, staffId);
+        AuditActionAttribute.Describe(HttpContext, $"issued a password reset code for {user.Name} ({user.Email.ToLowerInvariant()})");
+        return Ok(new { code });
+    }
+
     [HttpGet("properties")]
     [AuditAction("viewed hotel tenants", "view hotel tenants")]
     public async Task<IActionResult> List() =>

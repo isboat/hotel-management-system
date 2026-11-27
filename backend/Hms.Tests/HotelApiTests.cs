@@ -205,6 +205,27 @@ public sealed class HotelApiTests
                 new { email = "admin@example.test", password })).StatusCode);
             await SignIn(staff, "admin@example.test", newPassword);
 
+            var users = await Read(await platform.GetAsync("/api/v1/platform/users"));
+            Assert.Contains(users.GetProperty("items").EnumerateArray(), row => row.GetProperty("isSystemAdmin").GetBoolean());
+            var filteredUsers = await Read(await platform.GetAsync("/api/v1/platform/users?search=admin%40example.test"));
+            var target = Assert.Single(filteredUsers.GetProperty("items").EnumerateArray());
+            Assert.False(target.TryGetProperty("passwordHash", out _));
+            var resetPath = $"/api/v1/platform/users/{target.GetProperty("id").GetGuid()}/reset";
+            Assert.Equal(HttpStatusCode.Forbidden, (await staff.GetAsync("/api/v1/platform/users")).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await staff.PostAsync(resetPath, null)).StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.PostAsync(resetPath, null)).StatusCode);
+
+            var code = (await Read(await platform.PostAsync(resetPath, null))).GetProperty("code").GetString();
+            var recovery = new { code, password = "Recovered-strong-password" };
+            Assert.Equal(HttpStatusCode.NoContent, (await anonymous.PostAsJsonAsync("/api/v1/auth/reset", recovery)).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, (await anonymous.PostAsJsonAsync("/api/v1/auth/reset", recovery)).StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, (await staff.GetAsync("/api/v1/auth/properties")).StatusCode);
+            await SignIn(staff, "admin@example.test", recovery.password);
+            var recoveryAudit = await Read(await platform.GetAsync("/api/v1/platform/audit?search=issued%20a%20password%20reset%20code%20for"));
+            var auditEntry = Assert.Single(recoveryAudit.GetProperty("items").EnumerateArray());
+            Assert.Contains("Property Admin (admin@example.test)", auditEntry.GetProperty("action").GetString());
+            Assert.DoesNotContain(code!, auditEntry.GetRawText());
+
         }
         finally
         {
