@@ -1,5 +1,4 @@
 using Hms.Api.Data;
-using Hms.Api.Security;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Headers;
@@ -226,26 +225,6 @@ public sealed class HotelApiTests
             var auditEntry = Assert.Single(recoveryAudit.GetProperty("items").EnumerateArray());
             Assert.Contains("Property Admin (admin@example.test)", auditEntry.GetProperty("action").GetString());
             Assert.DoesNotContain(code!, auditEntry.GetRawText());
-
-            var systemAdmin = Assert.Single(users.GetProperty("items").EnumerateArray(), row => row.GetProperty("isSystemAdmin").GetBoolean());
-            var previousCode = (await Read(await platform.PostAsync($"/api/v1/platform/users/{systemAdmin.GetProperty("id").GetGuid()}/reset", null)))
-                .GetProperty("code").GetString();
-            await using var recoveryScope = factory.Services.CreateAsyncScope();
-            var recoveryDatabase = recoveryScope.ServiceProvider.GetRequiredService<HotelDatabase>();
-            Assert.Null(await SystemAdministratorRecovery.IssueAsync(recoveryDatabase, "admin@example.test", "operator@example.test"));
-            var emergencyCode = await SystemAdministratorRecovery.IssueAsync(recoveryDatabase, " platform@example.test ", "operator@example.test");
-            Assert.NotNull(emergencyCode);
-            Assert.Equal(HttpStatusCode.BadRequest, (await anonymous.PostAsJsonAsync("/api/v1/auth/reset",
-                new { code = previousCode, password = recovery.password })).StatusCode);
-            Assert.Equal(HttpStatusCode.NoContent, (await anonymous.PostAsJsonAsync("/api/v1/auth/reset",
-                new { code = emergencyCode, password = recovery.password })).StatusCode);
-            Assert.Equal(HttpStatusCode.Unauthorized, (await platform.GetAsync("/api/v1/platform/users")).StatusCode);
-            await SignIn(platform, "platform@example.test", recovery.password);
-            var emergencyAudit = await Read(await platform.GetAsync("/api/v1/platform/audit?search=emergency%20password%20reset"));
-            var emergencyEntry = Assert.Single(emergencyAudit.GetProperty("items").EnumerateArray());
-            Assert.Contains("operator@example.test", emergencyEntry.GetProperty("action").GetString());
-            Assert.DoesNotContain(emergencyCode!, emergencyEntry.GetRawText());
-
 
         }
         finally

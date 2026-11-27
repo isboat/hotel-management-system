@@ -9,12 +9,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
-if (args.FirstOrDefault() == SystemAdministratorRecovery.CommandName)
-{
-    Environment.ExitCode = await SystemAdministratorRecovery.RunAsync(args);
-    return;
-}
-
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<HotelDatabase>((services, options) =>
 {
